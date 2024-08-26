@@ -9,24 +9,17 @@ import (
 
 var ctx context.Context
 
-type Event struct {
-	Name string `json:"name"`
-}
-
 func init() {
-	log, err := zap.NewProduction()
-	if err != nil {
-		log.Fatal("couldn't set up logger", zap.Error(err))
-	}
-
 	ctx = context.Background()
+
+	log, _ := zap.NewProduction()
 	ctx = logger.Inject(ctx, log)
 }
 
-func Handler(ctx context.Context, event Event) error {
+func Handler(ctx context.Context, event interface{}) (interface{}, error) {
 	log := logger.GetLoggerFromContext(ctx)
-	log.Info("received event lambda", zap.Any("event", event))
-	return nil
+	log.Info("received event", zap.Any("event", event))
+	return event, nil
 }
 
 func main() {

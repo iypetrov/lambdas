@@ -8,14 +8,14 @@ import (
 
 type KeyType string
 
-var logKey KeyType = "LOGGER"
+var key KeyType = "LOGGER"
 
 func Inject(ctx context.Context, log *zap.Logger) context.Context {
-	return context.WithValue(ctx, "LOGGER", log)
+	return context.WithValue(ctx, key, log)
 }
 
 func GetLoggerFromContext(ctx context.Context) *zap.Logger {
-	c, ok := ctx.Value(logKey).(*zap.Logger)
+	c, ok := ctx.Value(key).(*zap.Logger)
 	if !ok {
 		log.Fatal("couldn't get logger from context")
 	}
