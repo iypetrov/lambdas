@@ -1,0 +1,75 @@
+---
+name: Build and push image to ECR
+on:
+  push:
+    tags:
+      - "*_[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build-and-push-image-to-ecr:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Login to ECR
+      uses: jwalton/gh-ecr-login@v3
+      with:
+        region: ${{ secrets.AWS_REGION }}
+        access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Extract Lambda function name & tag
+      run: |
+        DATA=${GITHUB_REF#refs/tags/}
+        if [[ -z "$DATA" ]]; then
+          echo "Failed to extract DATA from GITHUB_REF"
+          exit 1
+        fi
+
+        NAME=$(echo $DATA | cut -d _ -f1)
+        echo "NAME=$NAME" >> $GITHUB_ENV
+        echo "Extracted Lambda name: $NAME"
+
+        TAG=$(echo $DATA | cut -d _ -f2)
+        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "Extracted Lambda tag: $TAG"
+
+        if find . -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | grep -qs "${NAME}"; then
+          echo "Lambda function directory exists"
+        else
+          echo "Lambda function directory does not exist"
+          exit 1
+        fi
+
+    - name: Build image
+      run: |
+        cd ${{ env.NAME }}
+        docker build -t ip812/${{ env.NAME }}:${{ env.TAG }} .
+
+    - name: Check if image exists
+      run: |
+        if ! aws ecr describe-repositories --repository-name ip812/${{ env.NAME }} --region ${{ secrets.AWS_REGION }} 2> /dev/null; then
+          aws ecr create-repository --repository-name ip812/${{ env.NAME }} --region ${{ secrets.AWS_REGION }} --image-tag-mutability IMMUTABLE
+        fi
+
+    - name: Tag and Push to ECR
+      run: |
+        set -e
+
+        echo "Tagging image..."
+        docker tag ip812/${{ env.NAME }}:${{ env.TAG }} 678468774710.dkr.ecr.eu-central-1.amazonaws.com/ip812/${{ env.NAME }}:${{ env.TAG }}
+
+        echo "Pushing image to ECR..."
+        docker push 678468774710.dkr.ecr.eu-central-1.amazonaws.com/ip812/${{ env.NAME }}:${{ env.TAG }}

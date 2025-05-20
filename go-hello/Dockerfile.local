@@ -1,0 +1,14 @@
+FROM golang:1.24.1 AS build-stage
+WORKDIR /app
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/main .
+# https://github.com/aws/aws-lambda-runtime-interface-emulator/tree/develop
+RUN curl -Lo aws-lambda-rie https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie
+RUN chmod +x aws-lambda-rie
+
+FROM public.ecr.aws/lambda/provided:al2.2025.03.11.15 AS run-stage
+COPY --from=build-stage /app/bin/main /bin/main
+COPY --from=build-stage /app/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+ENV APP_ENV=local
+ENTRYPOINT ["/usr/local/bin/aws-lambda-rie", "/bin/main"]

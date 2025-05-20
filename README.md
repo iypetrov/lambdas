@@ -13,3 +13,13 @@ docker run -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie lambda-local:
 ```bash
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"payload":"hello world!"}'
 ```
+
+# Bootsrap
+
+To bootsrap a new lambda function run make bootstrap LAMBDA='foo-bar'
+
+# Tagging
+
+There is a convention for tagging
+
+`<lambda-folder>_<major>.<minor>.<patch>`
