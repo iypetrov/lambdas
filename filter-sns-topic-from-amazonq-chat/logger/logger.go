@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/ip812/filter-sns-topic-from-amazonq-chat/config"
+	"github.com/iypetrov/lambdas/filter-sns-topic-from-amazonq-chat/config"
 	"github.com/rs/zerolog"
 )
 

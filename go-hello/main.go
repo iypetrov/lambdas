@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/ip812/go-hello/config"
-	"github.com/ip812/go-hello/logger"
+	"github.com/iypetrov/lambdas/go-hello/config"
+	"github.com/iypetrov/lambdas/go-hello/logger"
 )
 
 func Handler(ctx context.Context, event interface{}) (interface{}, error) {

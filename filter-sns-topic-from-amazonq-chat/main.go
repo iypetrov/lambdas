@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/ip812/filter-sns-topic-from-amazonq-chat/config"
-	"github.com/ip812/filter-sns-topic-from-amazonq-chat/logger"
+	"github.com/iypetrov/lambdas/filter-sns-topic-from-amazonq-chat/config"
+	"github.com/iypetrov/lambdas/filter-sns-topic-from-amazonq-chat/logger"
 )
 
 func Handler(ctx context.Context, event interface{}) (interface{}, error) {

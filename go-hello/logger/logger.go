@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/ip812/go-hello/config"
+	"github.com/iypetrov/lambdas/go-hello/config"
 	"github.com/rs/zerolog"
 )
 
