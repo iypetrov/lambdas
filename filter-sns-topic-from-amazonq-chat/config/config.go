@@ -30,6 +30,9 @@ type Config struct {
 	App struct {
 		Env Environment
 	}
+	AWS struct {
+		TargetSNSTopicARN string
+	}
 }
 
 func Inject(ctx context.Context, cfg Config) context.Context {
@@ -51,6 +54,8 @@ func New() *Config {
 	if !cfg.App.Env.IsValid() {
 		cfg.App.Env = Prod
 	}
+
+	cfg.AWS.TargetSNSTopicARN = os.Getenv("AWS_TARGET_SNS_TOPIC_ARN")
 
 	return cfg
 }
