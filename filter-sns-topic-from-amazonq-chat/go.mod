@@ -1,6 +1,6 @@
-module github.com/ip812/filter-sns-topic-from-amazonq-chat
+module github.com/iypetrov/lambdas/filter-sns-topic-from-amazonq-chat
 
-go 1.24.1
+go 1.24.3
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0

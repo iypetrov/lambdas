@@ -1,6 +1,6 @@
-module github.com/ip812/go-hello
+module github.com/iypetrov/lambdas/go-hello
 
-go 1.24.1
+go 1.24.3
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
