@@ -56,12 +56,12 @@ jobs:
     - name: Build image
       run: |
         cd ${{ env.NAME }}
-        docker build -t ip812/${{ env.NAME }}:${{ env.TAG }} .
+        docker build -t ${{ env.NAME }}:${{ env.TAG }} .
 
     - name: Check if image exists
       run: |
-        if ! aws ecr describe-repositories --repository-name ip812/${{ env.NAME }} --region ${{ secrets.AWS_REGION }} 2> /dev/null; then
-          aws ecr create-repository --repository-name ip812/${{ env.NAME }} --region ${{ secrets.AWS_REGION }} --image-tag-mutability IMMUTABLE
+        if ! aws ecr describe-repositories --repository-name ${{ env.NAME }} --region ${{ secrets.AWS_REGION }} 2> /dev/null; then
+          aws ecr create-repository --repository-name ${{ env.NAME }} --region ${{ secrets.AWS_REGION }} --image-tag-mutability IMMUTABLE
         fi
 
     - name: Tag and Push to ECR
@@ -69,7 +69,7 @@ jobs:
         set -e
 
         echo "Tagging image..."
-        docker tag ip812/${{ env.NAME }}:${{ env.TAG }} 678468774710.dkr.ecr.eu-central-1.amazonaws.com/ip812/${{ env.NAME }}:${{ env.TAG }}
+        docker tag ${{ env.NAME }}:${{ env.TAG }} 678468774710.dkr.ecr.eu-central-1.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
 
         echo "Pushing image to ECR..."
-        docker push 678468774710.dkr.ecr.eu-central-1.amazonaws.com/ip812/${{ env.NAME }}:${{ env.TAG }}
+        docker push 678468774710.dkr.ecr.eu-central-1.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
