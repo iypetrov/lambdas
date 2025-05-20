@@ -16,7 +16,10 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d
 
 # Bootsrap
 
-To bootsrap a new lambda function run make bootstrap LAMBDA='foo-bar'
+To bootsrap a new lambda function run 
+```bash
+make go-bootstrap-mac LAMBDA='foo-bar'
+``` 
 
 # Tagging
 
