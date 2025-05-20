@@ -37,26 +37,26 @@ func Get(ctx context.Context) Logger {
 
 func New(cfg *config.Config) Logger {
 	var log zerolog.Logger
-	if cfg.App.Env == config.Local {
-		log = zerolog.New(zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
-		}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		zerolog.TimeFieldFormat = time.RFC3339
-		zerolog.TimestampFunc = time.Now().UTC
-		return &LoggerLocal{
-			Log: &log,
-		}
-	}
-
-	log = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	// if cfg.App.Env == config.Local {
+	log = zerolog.New(zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.RFC3339,
+	}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	zerolog.TimeFieldFormat = time.RFC3339
 	zerolog.TimestampFunc = time.Now().UTC
-	return &LoggerProd{
+	return &LoggerLocal{
 		Log: &log,
 	}
+	// }
+
+	// log = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	// zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	// zerolog.TimeFieldFormat = time.RFC3339
+	// zerolog.TimestampFunc = time.Now().UTC
+	// return &LoggerProd{
+	// 	Log: &log,
+	// }
 }
 
 // Logger implementation for local development (plain text)
