@@ -7,6 +7,9 @@ invoke-local:
 	-H "Content-Type: application/json" \
 	--data-binary @payload.json
 
+test:
+	@go test -v ./... 
+
 fmt:
 	@go fmt $(shell go list ./... | grep -v /vendor/)
 	@find . -path ./vendor -prune -o -name '*.go' -exec goimports -l -w {} +
