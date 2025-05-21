@@ -38,7 +38,7 @@ func Handler(ctx context.Context, event events.SNSEvent) error {
 		log.Info("Alarm %s in state %s", alarmMsg.AlarmName, alarmMsg.NewStateValue)
 		santizedAlarmMsg := sanitizer(alarmMsg)
 		if santizedAlarmMsg == nil {
-			log.Info("Alarm %s in state %s was dropped", alarmMsg.AlarmName, alarmMsg.NewStateValue)
+			log.Info("Alarm %s was dropped", alarmMsg.AlarmName)
 			continue
 		}
 
