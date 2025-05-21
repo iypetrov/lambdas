@@ -11,4 +11,8 @@ FROM public.ecr.aws/lambda/provided:al2.2025.05.04.04 AS run-stage
 COPY --from=build-stage /app/bin/main /bin/main
 COPY --from=build-stage /app/aws-lambda-rie /usr/local/bin/aws-lambda-rie
 ENV APP_ENV=local
+ENV AWS_ACCESS_KEY_ID=AKIAEXAMPLE
+ENV AWS_SECRET_ACCESS_KEY=EXAMPLEKEY
+ENV AWS_REGION=eu-west-2
+ENV AWS_TARGET_SNS_TOPIC_ARN=arn:aws:sns:eu-west-2:678468774710:alb-notifications
 ENTRYPOINT ["/usr/local/bin/aws-lambda-rie", "/bin/main"]
