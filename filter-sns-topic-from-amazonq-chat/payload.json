@@ -1,21 +1,21 @@
 {
-  "Records": [
-    {
-      "EventVersion": "1.0",
-      "EventSubscriptionArn": "arn:aws:sns:eu-west-2:678468774710:raw-alb-notifications",
-      "EventSource": "aws:sns",
-      "Sns": {
-        "Type": "Notification",
-        "MessageId": "28f8c79b-adc1-5a98-bd22-a73cf61a0bbb",
-        "TopicArn": "arn:aws:sns:eu-west-2:678468774710:raw-alb-notifications",
-        "Subject": "OK: \"alb-unhealthy-instaces-alarm\" in EU (London)",
-        "Message": "{\n  \"AlarmName\": \"C17-test-gasx-https-int-healthy-instaces-alarm\",\n  \"AlarmDescription\": \"Alarm when the number of unhealthy instances is greater than or equal to 1\",\n  \"AWSAccountId\": \"678468774710\",\n  \"AlarmConfigurationUpdatedTimestamp\": \"2025-05-21T04:22:28.822+0000\",\n  \"NewStateValue\": \"OK\",\n  \"NewStateReason\": \"Threshold Crossed: 1 datapoint [0.0 (21/05/25 04:39:00)] was not greater than or equal to the threshold (1.0).\",\n  \"StateChangeTime\": \"2025-05-21T04:42:03.047+0000\",\n  \"Region\": \"EU (London)\",\n  \"AlarmArn\": \"arn:aws:cloudwatch:eu-west-2:678468774710:alarm:alb-unhealthy-instaces-alarm\",\n  \"OldStateValue\": \"ALARM\",\n  \"OKActions\": [\n    \"arn:aws:sns:eu-west-2:678468774710:raw-alb-notifications\"\n  ],\n  \"AlarmActions\": [\n    \"arn:aws:sns:eu-west-2:678468774710:raw-alb-notifications\"\n  ],\n  \"InsufficientDataActions\": [],\n  \"Trigger\": {\n    \"MetricName\": \"UnHealthyHostCount\",\n    \"Namespace\": \"AWS/ApplicationELB\",\n    \"StatisticType\": \"Statistic\",\n    \"Statistic\": \"MAXIMUM\",\n    \"Unit\": null,\n    \"Dimensions\": [\n      {\n        \"name\": \"TargetGroup\",\n        \"value\": \"targetgroup/alb-tg/6e8d767ac15e2ff5\"\n      },\n      {\n        \"name\": \"LoadBalancer\",\n        \"value\": \"app/alb/767cc2c7188504e9\"\n      }\n    ],\n    \"Period\": 60,\n    \"EvaluationPeriods\": 1,\n    \"ComparisonOperator\": \"GreaterThanOrEqualToThreshold\",\n    \"Threshold\": 1.0,\n    \"TreatMissingData\": \"missing\",\n    \"EvaluateLowSampleCountPercentile\": \"\"\n  }\n}",
-        "Timestamp": "2025-05-21T04:42:03.081Z",
-        "SignatureVersion": "1",
-        "Signature": "JLQ1RirN9wyfEvhM7RDo01czjX+LaNop...",
-        "SigningCertUrl": "https://sns.eu-west-2.amazonaws.com/SimpleNotificationService-9c6465fa7f48f5cacd23014631ec1136.pem",
-        "UnsubscribeUrl": "https://sns.eu-west-2.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-2:678468774710:raw-alb-notifications"
+    "Records": [
+      {
+        "EventVersion": "1.0",
+        "EventSubscriptionArn": "arn:aws:sns:eu-west-2:123456789012:example-alb-notifications",
+        "EventSource": "aws:sns",
+        "Sns": {
+          "Type": "Notification",
+          "MessageId": "00000000-aaaa-bbbb-cccc-111111111111",
+          "TopicArn": "arn:aws:sns:eu-west-2:123456789012:example-alb-notifications",
+          "Subject": "OK: \"alb-unhealthy-instaces-alarm\" in EU (London)",
+          "Message": "{\n  \"AlarmName\": \"example-test-service-healthy-instances-alarm\",\n  \"AlarmDescription\": \"Alarm when the number of unhealthy instances is greater than or equal to 1\",\n  \"AWSAccountId\": \"123456789012\",\n  \"AlarmConfigurationUpdatedTimestamp\": \"2025-05-21T04:22:28.822+0000\",\n  \"NewStateValue\": \"OK\",\n  \"NewStateReason\": \"Threshold Crossed: 1 datapoint [0.0 (21/05/25 04:39:00)] was not greater than or equal to the threshold (1.0).\",\n  \"StateChangeTime\": \"2025-05-21T04:42:03.047+0000\",\n  \"Region\": \"EU (London)\",\n  \"AlarmArn\": \"arn:aws:cloudwatch:eu-west-2:123456789012:alarm:example-unhealthy-instances-alarm\",\n  \"OldStateValue\": \"ALARM\",\n  \"OKActions\": [\n    \"arn:aws:sns:eu-west-2:123456789012:example-alb-notifications\"\n  ],\n  \"AlarmActions\": [\n    \"arn:aws:sns:eu-west-2:123456789012:example-alb-notifications\"\n  ],\n  \"InsufficientDataActions\": [],\n  \"Trigger\": {\n    \"MetricName\": \"UnHealthyHostCount\",\n    \"Namespace\": \"AWS/ApplicationELB\",\n    \"StatisticType\": \"Statistic\",\n    \"Statistic\": \"MAXIMUM\",\n    \"Unit\": null,\n    \"Dimensions\": [\n      {\n        \"name\": \"TargetGroup\",\n        \"value\": \"targetgroup/example-target-group/1234567890abcdef\"\n      },\n      {\n        \"name\": \"LoadBalancer\",\n        \"value\": \"app/example-alb/abcdef1234567890\"\n      }\n    ],\n    \"Period\": 60,\n    \"EvaluationPeriods\": 1,\n    \"ComparisonOperator\": \"GreaterThanOrEqualToThreshold\",\n    \"Threshold\": 1.0,\n    \"TreatMissingData\": \"missing\",\n    \"EvaluateLowSampleCountPercentile\": \"\"\n  }\n}",
+          "Timestamp": "2025-05-21T04:42:03.081Z",
+          "SignatureVersion": "1",
+          "Signature": "REDACTED_SIGNATURE_FOR_SANITIZATION",
+          "SigningCertUrl": "https://sns.eu-west-2.amazonaws.com/SimpleNotificationService-EXAMPLECERT.pem",
+          "UnsubscribeUrl": "https://sns.eu-west-2.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-2:123456789012:example-alb-notifications"
+        }
       }
-    }
-  ]
+    ]
 }
