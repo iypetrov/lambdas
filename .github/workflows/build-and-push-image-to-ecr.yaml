@@ -8,8 +8,6 @@ on:
 jobs:
   build-and-push-image-to-ecr:
     runs-on: ubuntu-24.04
-    env:
-      AWS_ACCOUNT_ID: 833704146350
     permissions:
       contents: read
       packages: write
@@ -71,7 +69,6 @@ jobs:
         set -e
 
         echo "Tagging image..."
-        docker tag ${{ env.NAME }}:${{ env.TAG }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
-
+        docker tag ${{ env.NAME }}:${{ env.TAG }} ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
         echo "Pushing image to ECR..."
-        docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
+        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.NAME }}:${{ env.TAG }}
