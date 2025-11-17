@@ -1,4 +1,4 @@
-FROM golang:1.24.3 AS build-stage
+FROM golang:1.24.10 AS build-stage
 WORKDIR /app
 COPY . .
 RUN go mod tidy
