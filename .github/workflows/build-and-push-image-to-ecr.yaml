@@ -9,7 +9,7 @@ jobs:
   build-and-push-image-to-ecr:
     runs-on: ubuntu-24.04
     env:
-      AWS_ACCOUNT_ID: 678468774710
+      AWS_ACCOUNT_ID: 833704146350
     permissions:
       contents: read
       packages: write
