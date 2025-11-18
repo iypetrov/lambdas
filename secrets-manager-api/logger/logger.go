@@ -35,7 +35,7 @@ func Get(ctx context.Context) Logger {
 	return c
 }
 
-func New(cfg *config.Config) Logger {
+func New(cfg config.Config) Logger {
 	var log zerolog.Logger
 	if cfg.App.Env == config.Local {
 		log = zerolog.New(zerolog.ConsoleWriter{

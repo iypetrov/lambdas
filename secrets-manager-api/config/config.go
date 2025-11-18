@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Environment string
@@ -44,8 +46,9 @@ func Get(ctx context.Context) Config {
 	return c
 }
 
-func New() *Config {
-	cfg := &Config{}
+func New() Config {
+	cfg := Config{}
+	_ = godotenv.Load()
 
 	cfg.App.Env = Environment(os.Getenv("APP_ENV"))
 	if !cfg.App.Env.IsValid() {

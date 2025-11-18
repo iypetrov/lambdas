@@ -1,0 +1,7 @@
+{
+  "componentsDir": "templates",
+  "utilsDir": "utils",
+  "moduleName": "github.com/iypetrov/lambdas/secrets-manager-api",
+  "jsDir": "static/js",
+  "jsPublicPath": "/static/js"
+}

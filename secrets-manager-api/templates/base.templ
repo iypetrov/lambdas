@@ -1,0 +1,31 @@
+package templates
+
+import (
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/code"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/textarea"
+)
+
+templ Base() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Ilia's blog</title>
+			<link href="/static/css/output.css" rel="stylesheet"/>
+			<link rel="icon" href="data:,"/>
+			<link rel="icon" type="image/x-icon" href="https://avatars.githubusercontent.com/u/72142537"/>
+			<script src="/static/js/htmx.min.js"></script>
+			<script defer src="/static/js/alpine.min.js"></script>
+			<script src="https://js.stripe.com/v3/"></script>
+		</head>
+		<body>
+			@Toast()
+            @code.Script()
+            @textarea.Script()
+			<div class="relative md:flex font-primary w-screen min-h-screen">
+				{ children... }
+			</div>
+		</body>
+	</html>
+}

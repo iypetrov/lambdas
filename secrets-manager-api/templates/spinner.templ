@@ -1,0 +1,20 @@
+package templates
+
+import (
+    "github.com/iypetrov/lambdas/secrets-manager-api/templates/icon"
+)
+
+templ Spinner() {
+	<div
+		id="spinner"
+		class="flex items-center justify-center h-full w-full"
+	>
+
+	    @icon.LoaderCircle(icon.Props{
+	        Class: "spinner animate-spin",
+	    })
+		<div class="spinner-content">
+			{ children... }
+		</div>
+	</div>
+}
