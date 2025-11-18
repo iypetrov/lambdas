@@ -2,6 +2,8 @@ FROM golang:1.24.10 AS build-stage
 WORKDIR /app
 COPY . .
 RUN go install github.com/a-h/templ/cmd/templ@v0.3.960
+RUN curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.8/tailwindcss-linux-x64 -o bin/tailwindcss-linux-x64
+RUN chmod +x bin/tailwindcss-linux-x64
 RUN ./bin/tailwindcss-linux-x64 -i ./static/css/input.css -o ./static/css/output.css --minify
 RUN templ generate
 RUN go mod tidy
