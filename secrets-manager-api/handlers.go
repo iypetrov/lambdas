@@ -19,13 +19,7 @@ type RouterHandler struct {
 }
 
 func (hnd *RouterHandler) StaticFiles() http.Handler {
-	if hnd.config.App.Env == config.Local {
-		hnd.log.Info("serving static files from local directory")
-		return http.StripPrefix("/static", http.FileServer(http.Dir("static")))
-	}
-
-	hnd.log.Info("serving static files from embedded FS")
-	return http.StripPrefix("/", http.FileServer(http.FS(staticFS)))
+	return http.StripPrefix("/static", http.FileServer(http.Dir("static")))
 }
 
 func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {
