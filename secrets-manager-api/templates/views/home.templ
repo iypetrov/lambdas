@@ -4,29 +4,64 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates"
 )
 
+type SideBarLinkProps struct {
+	Name string
+	Href string
+}
+
+templ SideBarLink(props SideBarLinkProps) {
+    <a href={ props.Href } class="flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors text-gray-300 hover:bg-gray-800 hover:text-white">
+        <span>{ props.Name }</span>
+    </a>
+}
+
 templ HomePage() {
-	@templates.Base() {
-		<div class="flex flex-col min-h-screen justify-between w-full">
-            <nav class="w-full flex justify-center py-4 text-base-100">
-                <div class="flex gap-12">
-                    <a href="/p/public/articles" 
-                       class="text-xl font-bold hover:underline cursor-pointer">
-                        Static Secrets
-                    </a>
-                    <a href="/p/public/projects" 
-                       class="text-xl font-bold hover:underline cursor-pointer">
-                        TLS Certificates
-                    </a>
+    @templates.Base() {
+        <div class="flex min-h-screen w-full">
+            <aside class="w-64 bg-gray-900 min-h-screen flex flex-col">
+                <div class="w-full p-6 flex flex-col items-center justify-center">
+                    <h1 class="text-xl font-bold text-gray-600">Secrets Manager</h1>
                 </div>
-            </nav>
 
-            <div class="flex flex-col items-center justify-center flex-1 text-center px-4">
-                <p class="text-lg md:text-xl max-w-md leading-relaxed">
-                    Welcome to the Secrets Manager API! Securely manage your static secrets and TLS certificates with ease. Explore our documentation to get started.
-                </p>
-            </div>
+                <nav class="px-4 flex-1">
+                    @SideBarLink(SideBarLinkProps{
+                        Name: "Static Secrets",
+                        Href: "/",
+                    })
+                    @SideBarLink(SideBarLinkProps{
+                        Name: "TLS Certificates",
+                        Href: "/brochure",
+                    })
+                </nav>
+            </aside>
 
-            @templates.Footer()
+            @templates.Page() {
+                <h1 class="text-3xl font-bold mb-2 text-gray-900">Dashboard</h1>
+                <p class="text-gray-600 mb-6">Welcome back to the backoffice.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-4 transition">
+                        <h3 class="font-semibold text-lg mb-2 text-gray-700">Total Questions</h3>
+                        <p class="text-2xl font-bold text-gray-900">42</p>
+                        <p class="text-sm text-gray-500">Questions received</p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-4 transition">
+                        <h3 class="font-semibold text-lg mb-2 text-gray-700">Total Slideshows</h3>
+                        <p class="text-2xl font-bold text-gray-900">7</p>
+                        <p class="text-sm text-gray-500">Slideshows uploaded</p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-4 transition">
+                        <h3 class="font-semibold text-lg mb-2 text-gray-700">Total Brochures</h3>
+                        <p class="text-2xl font-bold text-gray-900">15</p>
+                        <p class="text-sm text-gray-500">Brochures uploaded</p>
+                    </div>
+
+                </div>
+            }
+
         </div>
-	}
+    }
 }
