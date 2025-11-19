@@ -5,12 +5,17 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
 )
 
 func NewRouter(hnd RouterHandler) *chi.Mux {
     mux := chi.NewRouter()
-	mux.Handle(fmt.Sprintf("/%s/static/*", hnd.config.App.Env), hnd.StaticFiles())
+
+	if hnd.config.App.Env == config.Local {
+		mux.Handle("/static/*", hnd.StaticFiles())
+	}
+
 	mux.With().Route(fmt.Sprintf("/%s/p", hnd.config.App.Env), func(mux chi.Router) {
 		mux.Get("/home", hnd.HomeView)
 	})
