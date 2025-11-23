@@ -1,0 +1,46 @@
+package views
+
+templ EmptySecretsTable() {
+	<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+		<table class="w-full">
+			<thead class="bg-gray-50">
+				<tr>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cluster</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="bg-white divide-y divide-gray-200">
+				<tr>
+					<td colspan="4" class="px-6 py-8 text-center text-gray-500">
+						Failed to load secrets. Please try again.
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+}
+
+templ EmptyStatistics() {
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+		<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+			<h3 class="font-semibold text-lg mb-2 text-gray-700">Static Secrets</h3>
+			<p class="text-3xl font-bold text-gray-900">-</p>
+			<p class="text-sm text-gray-500 mt-2">Failed to load</p>
+		</div>
+
+		<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+			<h3 class="font-semibold text-lg mb-2 text-gray-700">TLS Certificates</h3>
+			<p class="text-3xl font-bold text-gray-900">-</p>
+			<p class="text-sm text-gray-500 mt-2">Failed to load</p>
+		</div>
+	</div>
+}
+
+templ EmptyModal() {
+	<div class="p-6">
+		<p class="text-gray-500">Failed to load secret value.</p>
+	</div>
+}
+

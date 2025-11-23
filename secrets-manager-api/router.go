@@ -22,8 +22,14 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 
 	mux.Route(fmt.Sprintf("/%s/api", hnd.config.App.Env), func(mux chi.Router) {
 		mux.Route("/v0", func(mux chi.Router) {
+			mux.Get("/statistics", utils.MakeTemplHandler(hnd.GetStatistics))
+			mux.Get("/clusters", utils.MakeTemplHandler(hnd.ListClusters))
 			mux.Route("/secrets", func(mux chi.Router) {
-				mux.Get("/", utils.MakeTemplHandler(hnd.GetAllSecrets))
+				mux.Get("/", utils.MakeTemplHandler(hnd.ListSecrets))
+				mux.Post("/", utils.MakeTemplHandler(hnd.CreateSecret))
+				mux.Get("/get", utils.MakeTemplHandler(hnd.GetSecret))
+				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateSecret))
+				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteSecret))
 			})
 		})
 	})
