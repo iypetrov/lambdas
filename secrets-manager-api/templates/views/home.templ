@@ -29,7 +29,7 @@ templ SideBarLink(props SideBarLinkProps) {
 	</button>
 }
 
-templ HomePage(stats *secrets.Statistics, clusters []string, env string) {
+templ HomePage(stats *secrets.Statistics, env string) {
 	@templates.Base() {
 		<div class="flex min-h-screen w-full" x-data="{ activeTab: '', showCreateModal: false, secretType: 'static', showValueModal: false, selectedCluster: '' }">
 			<aside class="w-64 bg-gray-900 min-h-screen flex flex-col">
@@ -66,11 +66,13 @@ templ HomePage(stats *secrets.Statistics, clusters []string, env string) {
 								x-model="selectedCluster"
 								x-on:change="htmx.trigger('body', 'refresh')"
 								class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+								hx-get={ fmt.Sprintf("/%s/api/v0/clusters", env) }
+								hx-trigger="load"
+								hx-swap="innerHTML"
+								hx-target="this"
+								hx-on::after-swap="if(this.options.length > 0 && this.options[0].value) { selectedCluster = this.options[0].value; htmx.trigger('body', 'refresh'); }"
 							>
-								<option value="">All Clusters</option>
-								for _, cluster := range clusters {
-									<option value={ cluster }>{ cluster }</option>
-								}
+								<option value="">Loading clusters...</option>
 							</select>
 						</div>
 					</div>
@@ -107,7 +109,7 @@ templ HomePage(stats *secrets.Statistics, clusters []string, env string) {
 							@button.Button(button.Props{
 								Variant: button.VariantDefault,
 								Attributes: templ.Attributes{
-									"x-on:click": "showCreateModal = true; secretType = 'static'",
+									"x-on:click": "showCreateModal = true; secretType = 'static'; setTimeout(() => htmx.trigger('#cluster', 'load'), 100)",
 								},
 							}) {
 								<span>+ Create Secret</span>
@@ -127,7 +129,7 @@ templ HomePage(stats *secrets.Statistics, clusters []string, env string) {
 							@button.Button(button.Props{
 								Variant: button.VariantDefault,
 								Attributes: templ.Attributes{
-									"x-on:click": "showCreateModal = true; secretType = 'tls'",
+									"x-on:click": "showCreateModal = true; secretType = 'tls'; setTimeout(() => htmx.trigger('#cluster', 'load'), 100)",
 								},
 							}) {
 								<span>+ Create Certificate</span>
@@ -185,11 +187,13 @@ templ HomePage(stats *secrets.Statistics, clusters []string, env string) {
 									required
 									x-model="selectedCluster"
 									class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+									hx-get={ fmt.Sprintf("/%s/api/v0/clusters", env) }
+									hx-trigger="load"
+									hx-swap="innerHTML"
+									hx-target="this"
+									hx-on::after-swap="if(this.options.length > 0 && this.options[0].value) { selectedCluster = this.options[0].value; }"
 								>
-									<option value="">Select a cluster</option>
-									for _, cluster := range clusters {
-										<option value={ cluster }>{ cluster }</option>
-									}
+									<option value="">Loading clusters...</option>
 								</select>
 							}
 

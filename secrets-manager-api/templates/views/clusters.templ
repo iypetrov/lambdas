@@ -11,3 +11,17 @@ templ ClustersList(clusters []string) {
 	</div>
 }
 
+templ ClusterOptions(clusters []string) {
+	if len(clusters) > 0 {
+		for i, cluster := range clusters {
+			if i == 0 {
+				<option value={ cluster } selected>{ cluster }</option>
+			} else {
+				<option value={ cluster }>{ cluster }</option>
+			}
+		}
+	} else {
+		<option value="" disabled>No clusters available</option>
+	}
+}
+

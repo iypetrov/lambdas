@@ -37,13 +37,8 @@ func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {
 		stats = &secrets.Statistics{}
 	}
 	
-	clusters, err := hnd.clusterService.GetAllClusters(ctx)
-	if err != nil {
-		hnd.log.Error("Failed to list clusters: %v", err)
-		clusters = []string{}
-	}
-	
-	utils.Render(w, r, views.HomePage(stats, clusters, string(hnd.config.App.Env)))
+	// Clusters are now loaded dynamically via HTMX, no need to fetch them here
+	utils.Render(w, r, views.HomePage(stats, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) error {
@@ -62,10 +57,10 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 	ctx := r.Context()
 	clusters, err := hnd.clusterService.GetAllClusters(ctx)
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.ClustersList([]string{}))
+		hnd.log.Error("Failed to list clusters: %v", err)
+		clusters = []string{}
 	}
-	return utils.Render(w, r, views.ClustersList(clusters))
+	return utils.Render(w, r, views.ClusterOptions(clusters))
 }
 
 func (hnd *RouterHandler) ListSecrets(w http.ResponseWriter, r *http.Request) error {
