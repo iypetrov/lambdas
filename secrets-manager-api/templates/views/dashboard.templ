@@ -5,7 +5,11 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 )
 
-templ DashboardContent(stats *secrets.Statistics, env string) {
+templ DashboardPage(stats *secrets.Statistics, env string) {
+	@Layout(LayoutProps{
+		Env:        env,
+		ActivePage: "home",
+	}) {
 	<div class="w-full">
 		<div class="flex justify-between items-center mb-6">
 			<div>
@@ -51,5 +55,6 @@ templ DashboardContent(stats *secrets.Statistics, env string) {
 			</div>
 		</div>
 	</div>
+	}
 }
 

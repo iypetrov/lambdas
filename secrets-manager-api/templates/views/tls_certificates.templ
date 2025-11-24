@@ -5,7 +5,11 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/button"
 )
 
-templ TLSCertificatesContent(env string) {
+templ TLSCertificatesPage(env string) {
+	@Layout(LayoutProps{
+		Env:        env,
+		ActivePage: "tls-certificates",
+	}) {
 	<div class="w-full">
 		<div class="flex justify-between items-center mb-6">
 			<div>
@@ -52,5 +56,6 @@ templ TLSCertificatesContent(env string) {
 			</div>
 		</div>
 	</div>
+	}
 }
 
