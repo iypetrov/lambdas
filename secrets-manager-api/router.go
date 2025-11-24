@@ -10,7 +10,7 @@ import (
 )
 
 func NewRouter(hnd RouterHandler) *chi.Mux {
-    mux := chi.NewRouter()
+	mux := chi.NewRouter()
 
 	if hnd.config.App.Env == config.Local {
 		mux.Handle("/static/*", hnd.StaticFiles())
@@ -19,7 +19,9 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 	mux.With().Route(fmt.Sprintf("/%s/p", hnd.config.App.Env), func(mux chi.Router) {
 		mux.Get("/home", hnd.HomeView)
 		mux.Get("/static-secrets", hnd.StaticSecretsView)
+		mux.Get("/static-secrets/{name}", hnd.StaticSecretDetailView)
 		mux.Get("/tls-certificates", hnd.TLSCertificatesView)
+		mux.Get("/tls-certificates/{name}", hnd.TLSCertificateDetailView)
 	})
 
 	mux.Route(fmt.Sprintf("/%s/api", hnd.config.App.Env), func(mux chi.Router) {
@@ -32,6 +34,8 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 				mux.Get("/get", utils.MakeTemplHandler(hnd.GetSecret))
 				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateSecret))
 				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteSecret))
+				mux.Post("/tags", utils.MakeTemplHandler(hnd.AddTag))
+				mux.Delete("/tags", utils.MakeTemplHandler(hnd.RemoveTag))
 			})
 		})
 	})
@@ -40,5 +44,5 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 		http.Redirect(w, r, fmt.Sprintf("/%s/p/home", hnd.config.App.Env), http.StatusFound)
 	})
 
-    return mux
+	return mux
 }

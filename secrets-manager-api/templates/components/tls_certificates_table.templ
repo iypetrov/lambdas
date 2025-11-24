@@ -1,6 +1,7 @@
 package components
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
@@ -30,11 +31,7 @@ templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
 					for _, secret := range secrets {
 						<tr class="hover:bg-gray-50">
 							<td class="px-6 py-4 whitespace-nowrap">
-								<a href="#" class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer" 
-									hx-get={ fmt.Sprintf("/%s/api/v0/secrets/get?name=%s", env, url.QueryEscape(secret.Name)) }
-									hx-target="#secret-value-modal"
-									hx-swap="innerHTML"
-									hx-on::after-request="showValueModal = true">
+								<a href={ fmt.Sprintf("/%s/p/tls-certificates/%s", env, base64.URLEncoding.EncodeToString([]byte(secret.Name))) } class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
 									{ secret.Name }
 								</a>
 							</td>

@@ -1,0 +1,221 @@
+package views
+
+import (
+	"fmt"
+	"net/url"
+	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/button"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/icon"
+)
+
+templ TLSCertificateDetailPage(details *secrets.GetSecretDetailsResponse, env string) {
+	@Layout(LayoutProps{
+		Env:        env,
+		ActivePage: "tls-certificates",
+	}) {
+	<div x-data="{ showAddTagModal: false }">
+	<div class="w-full">
+		<div class="mb-6">
+			<a href={ fmt.Sprintf("/%s/p/tls-certificates", env) } class="text-blue-600 hover:text-blue-800 flex items-center gap-2 mb-4">
+				@icon.ArrowLeft(icon.Props{Size: 20})
+				<span>Back to TLS Certificates</span>
+			</a>
+			<h1 class="text-3xl font-bold mb-2 text-gray-900">{ details.Name }</h1>
+			<p class="text-gray-600">Certificate Details</p>
+		</div>
+
+		<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+			<div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+				<h2 class="text-xl font-semibold text-gray-900">Metadata</h2>
+			</div>
+			<div class="px-6 py-4">
+				<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<div>
+						<dt class="text-sm font-medium text-gray-500">Name</dt>
+						<dd class="mt-1 text-sm text-gray-900 break-all">{ details.Name }</dd>
+					</div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500">ARN</dt>
+						<dd class="mt-1 text-sm text-gray-900 break-all">{ details.ARN }</dd>
+					</div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500">Type</dt>
+						<dd class="mt-1 text-sm text-gray-900">{ string(details.Type) }</dd>
+					</div>
+					<div>
+						<dt class="text-sm font-medium text-gray-500">Cluster</dt>
+						<dd class="mt-1 text-sm text-gray-900">{ details.Cluster }</dd>
+					</div>
+					if details.VersionID != "" {
+						<div>
+							<dt class="text-sm font-medium text-gray-500">Version ID</dt>
+							<dd class="mt-1 text-sm text-gray-900 font-mono">{ details.VersionID }</dd>
+						</div>
+					}
+					if details.CreatedDate != "" {
+						<div>
+							<dt class="text-sm font-medium text-gray-500">Created Date</dt>
+							<dd class="mt-1 text-sm text-gray-900">{ details.CreatedDate }</dd>
+						</div>
+					}
+					if details.LastChangedDate != "" {
+						<div>
+							<dt class="text-sm font-medium text-gray-500">Last Changed Date</dt>
+							<dd class="mt-1 text-sm text-gray-900">{ details.LastChangedDate }</dd>
+						</div>
+					}
+					if details.LastRotatedDate != "" {
+						<div>
+							<dt class="text-sm font-medium text-gray-500">Last Rotated Date</dt>
+							<dd class="mt-1 text-sm text-gray-900">{ details.LastRotatedDate }</dd>
+						</div>
+					}
+					if details.Description != "" {
+						<div class="sm:col-span-2">
+							<dt class="text-sm font-medium text-gray-500">Description</dt>
+							<dd class="mt-1 text-sm text-gray-900">{ details.Description }</dd>
+						</div>
+					}
+				</dl>
+			</div>
+		</div>
+
+		<div class="mt-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+			<div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+				<h2 class="text-xl font-semibold text-gray-900">Tags</h2>
+				@button.Button(button.Props{
+					Variant: button.VariantDefault,
+					Size: button.SizeSm,
+					Attributes: templ.Attributes{
+						"x-on:click": "showAddTagModal = true",
+					},
+				}) {
+					<span>+ Add Tag</span>
+				}
+			</div>
+			<div class="px-6 py-4">
+				if len(details.Tags) == 0 {
+					<div class="text-center py-8 text-gray-500">
+						No tags found. Add a tag to get started.
+					</div>
+				} else {
+					<table class="w-full">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+								<th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+							</tr>
+						</thead>
+						<tbody class="bg-white divide-y divide-gray-200">
+							for key, value := range details.Tags {
+								<tr class="hover:bg-gray-50">
+									<td class="px-4 py-3 whitespace-nowrap">
+										<div class="text-sm font-medium text-gray-900">{ key }</div>
+									</td>
+									<td class="px-4 py-3">
+										<div class="text-sm text-gray-900 break-all">{ value }</div>
+									</td>
+									<td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+										@button.Button(button.Props{
+											Variant: button.VariantDestructive,
+											Size: button.SizeSm,
+											Attributes: templ.Attributes{
+												"hx-delete": fmt.Sprintf("/%s/api/v0/secrets/tags?name=%s&key=%s", env, url.QueryEscape(details.Name), url.QueryEscape(key)),
+												"hx-confirm": fmt.Sprintf("Are you sure you want to delete the tag '%s'?", key),
+												"hx-target": "body",
+											},
+										}) {
+											<span class="button-text">Remove</span>
+											@icon.LoaderCircle(icon.Props{
+												Size: 16,
+												Class: "htmx-indicator animate-spin",
+											})
+										}
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</div>
+
+		<!-- Add Tag Modal -->
+		<div
+			x-show="showAddTagModal"
+			x-transition:enter="transition ease-out duration-300"
+			x-transition:enter-start="opacity-0"
+			x-transition:enter-end="opacity-100"
+			x-transition:leave="transition ease-in duration-200"
+			x-transition:leave-start="opacity-100"
+			x-transition:leave-end="opacity-0"
+			class="fixed inset-0 z-50 flex items-center justify-center"
+			style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
+			x-on:click.self="showAddTagModal = false"
+		>
+			<div
+				class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+				x-transition:enter="transition ease-out duration-300"
+				x-transition:enter-start="opacity-0 transform scale-95"
+				x-transition:enter-end="opacity-100 transform scale-100"
+				x-transition:leave="transition ease-in duration-200"
+				x-transition:leave-start="opacity-100 transform scale-100"
+				x-transition:leave-end="opacity-0 transform scale-95"
+			>
+				<div class="p-6">
+					<h3 class="text-xl font-bold mb-4 text-gray-900">Add Tag</h3>
+					<form
+						hx-post={ fmt.Sprintf("/%s/api/v0/secrets/tags", env) }
+						hx-target="body"
+						@htmx:after-request="showAddTagModal = false"
+					>
+						<input type="hidden" name="name" value={ details.Name } />
+						<div class="mb-4">
+							<label class="block text-sm font-medium text-gray-700 mb-2">Key</label>
+							<input
+								type="text"
+								name="key"
+								required
+								class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+								placeholder="Enter tag key"
+							/>
+						</div>
+						<div class="mb-4">
+							<label class="block text-sm font-medium text-gray-700 mb-2">Value</label>
+							<input
+								type="text"
+								name="value"
+								required
+								class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+								placeholder="Enter tag value"
+							/>
+						</div>
+						<div class="flex justify-end gap-3">
+							@button.Button(button.Props{
+								Variant: button.VariantDefault,
+								Attributes: templ.Attributes{
+									"type": "button",
+									"x-on:click": "showAddTagModal = false",
+								},
+							}) {
+								<span>Cancel</span>
+							}
+							@button.Button(button.Props{
+								Variant: button.VariantDefault,
+								Attributes: templ.Attributes{
+									"type": "submit",
+								},
+							}) {
+								<span>Add Tag</span>
+							}
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	</div>
+	}
+}
+

@@ -230,6 +230,158 @@ func (s *Service) ListSecrets(ctx context.Context, secretType SecretType, cluste
 	return secrets, nil
 }
 
+func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*GetSecretDetailsResponse, error) {
+	describeReq := &secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(secretName),
+	}
+
+	result, err := s.client.DescribeSecret(ctx, describeReq)
+	if err != nil {
+		s.log.Error("Error describing secret %s: %v", secretName, err)
+		return nil, fmt.Errorf("%s", err.Error())
+	}
+
+	tags := make(map[string]string)
+	var secretType SecretType
+	var cluster string
+
+	for _, tag := range result.Tags {
+		if tag.Key != nil && tag.Value != nil {
+			tags[*tag.Key] = *tag.Value
+			if *tag.Key == "Type" {
+				if *tag.Value == string(SecretTypeStaticSecret) {
+					secretType = SecretTypeStaticSecret
+				} else if *tag.Value == string(SecretTypeTLSCertificate) {
+					secretType = SecretTypeTLSCertificate
+				}
+			}
+			if *tag.Key == "Cluster" {
+				cluster = *tag.Value
+			}
+		}
+	}
+
+	var createdDate string
+	if result.CreatedDate != nil {
+		createdDate = result.CreatedDate.Format(time.RFC3339)
+	}
+
+	var lastChangedDate string
+	if result.LastChangedDate != nil {
+		lastChangedDate = result.LastChangedDate.Format(time.RFC3339)
+	}
+
+	var lastRotatedDate string
+	if result.LastRotatedDate != nil {
+		lastRotatedDate = result.LastRotatedDate.Format(time.RFC3339)
+	}
+
+	var versionID string
+	if result.VersionIdsToStages != nil && len(result.VersionIdsToStages) > 0 {
+		// Get the AWSCURRENT version ID if available, otherwise get the first one
+		for vID, stages := range result.VersionIdsToStages {
+			for _, stage := range stages {
+				if stage == "AWSCURRENT" {
+					versionID = vID
+					break
+				}
+			}
+			if versionID != "" {
+				break
+			}
+		}
+		// If no AWSCURRENT found, get the first version ID
+		if versionID == "" {
+			for vID := range result.VersionIdsToStages {
+				versionID = vID
+				break
+			}
+		}
+	}
+
+	var description string
+	if result.Description != nil {
+		description = *result.Description
+	}
+
+	s.log.Info("Retrieved secret details for %s", secretName)
+	return &GetSecretDetailsResponse{
+		Name:            *result.Name,
+		ARN:             *result.ARN,
+		Type:            secretType,
+		Cluster:         cluster,
+		Tags:            tags,
+		VersionID:       versionID,
+		CreatedDate:     createdDate,
+		LastChangedDate: lastChangedDate,
+		LastRotatedDate: lastRotatedDate,
+		Description:     description,
+	}, nil
+}
+
+func (s *Service) AddTag(ctx context.Context, req AddTagRequest) (*UpdateTagsResponse, error) {
+	tagReq := &secretsmanager.TagResourceInput{
+		SecretId: aws.String(req.Name),
+		Tags: []types.Tag{
+			{
+				Key:   aws.String(req.Key),
+				Value: aws.String(req.Value),
+			},
+		},
+	}
+
+	_, err := s.client.TagResource(ctx, tagReq)
+	if err != nil {
+		s.log.Error("Error adding tag to secret %s: %v", req.Name, err)
+		return nil, fmt.Errorf("%s", err.Error())
+	}
+
+	// Get the ARN for the response
+	describeReq := &secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(req.Name),
+	}
+	describe, err := s.client.DescribeSecret(ctx, describeReq)
+	if err != nil {
+		s.log.Error("Error describing secret %s: %v", req.Name, err)
+		return nil, fmt.Errorf("%s", err.Error())
+	}
+
+	s.log.Info("Added tag %s=%s to secret %s", req.Key, req.Value, req.Name)
+	return &UpdateTagsResponse{
+		Name: req.Name,
+		ARN:  *describe.ARN,
+	}, nil
+}
+
+func (s *Service) RemoveTag(ctx context.Context, req RemoveTagRequest) (*UpdateTagsResponse, error) {
+	untagReq := &secretsmanager.UntagResourceInput{
+		SecretId: aws.String(req.Name),
+		TagKeys:  []string{req.Key},
+	}
+
+	_, err := s.client.UntagResource(ctx, untagReq)
+	if err != nil {
+		s.log.Error("Error removing tag from secret %s: %v", req.Name, err)
+		return nil, fmt.Errorf("%s", err.Error())
+	}
+
+	// Get the ARN for the response
+	describeReq := &secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(req.Name),
+	}
+	describe, err := s.client.DescribeSecret(ctx, describeReq)
+	if err != nil {
+		s.log.Error("Error describing secret %s: %v", req.Name, err)
+		return nil, fmt.Errorf("%s", err.Error())
+	}
+
+	s.log.Info("Removed tag %s from secret %s", req.Key, req.Name)
+	return &UpdateTagsResponse{
+		Name: req.Name,
+		ARN:  *describe.ARN,
+	}, nil
+}
+
 func (s *Service) GetStatistics(ctx context.Context, cluster string) (*Statistics, error) {
 	staticSecrets, err := s.ListSecrets(ctx, SecretTypeStaticSecret, cluster)
 	if err != nil {

@@ -9,10 +9,10 @@ import (
 	chiadapter "github.com/awslabs/aws-lambda-go-api-proxy/chi"
 	"github.com/go-chi/chi/v5"
 
+	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
-	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 )
 
 func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *chi.Mux {
@@ -20,8 +20,8 @@ func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *ch
 	clusterService := clusters.NewService(ctx, cfg, log)
 
 	handler := RouterHandler{
-		config:        cfg,
-		log:           log,
+		config:         cfg,
+		log:            log,
 		secretsService: secretService,
 		clusterService: clusterService,
 	}
@@ -45,7 +45,7 @@ func main() {
 
 	log.Info("Starting Secrets Manager API in %s environment", cfg.App.Env)
 	if cfg.App.Env == config.Local {
-	 	http.ListenAndServe(":8080", configServer(ctx, cfg, log))
+		http.ListenAndServe(":8080", configServer(ctx, cfg, log))
 	} else {
 		ctx = log.Inject(ctx)
 		ctx = config.Inject(ctx, cfg)
