@@ -58,6 +58,7 @@ templ Layout(props LayoutProps) {
 				class="fixed inset-0 z-50 flex items-center justify-center"
 				style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
 				x-on:click.self="showCreateStaticModal = false; htmx.trigger('body', 'refresh')"
+				x-effect="if (showCreateStaticModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=\"additionalTags\"]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
 			>
 				<div
 					class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
@@ -98,6 +99,7 @@ templ Layout(props LayoutProps) {
 				class="fixed inset-0 z-50 flex items-center justify-center"
 				style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
 				x-on:click.self="showCreateTLSModal = false; htmx.trigger('body', 'refresh')"
+				x-effect="if (showCreateTLSModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=\"additionalTags\"]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
 			>
 				<div
 					class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
