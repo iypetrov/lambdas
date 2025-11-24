@@ -18,6 +18,8 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 
 	mux.With().Route(fmt.Sprintf("/%s/p", hnd.config.App.Env), func(mux chi.Router) {
 		mux.Get("/home", hnd.HomeView)
+		mux.Get("/static-secrets", hnd.StaticSecretsView)
+		mux.Get("/tls-certificates", hnd.TLSCertificatesView)
 	})
 
 	mux.Route(fmt.Sprintf("/%s/api", hnd.config.App.Env), func(mux chi.Router) {

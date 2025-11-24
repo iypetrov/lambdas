@@ -1,0 +1,11 @@
+package views
+
+templ TLSCertificatesPage(env string) {
+	@Layout(LayoutProps{
+		Env:        env,
+		ActivePage: "tls-certificates",
+	}) {
+		@TLSCertificatesContent(env)
+	}
+}
+

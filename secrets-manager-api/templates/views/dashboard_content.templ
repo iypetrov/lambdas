@@ -1,0 +1,55 @@
+package views
+
+import (
+	"fmt"
+	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
+)
+
+templ DashboardContent(stats *secrets.Statistics, env string) {
+	<div class="w-full">
+		<div class="flex justify-between items-center mb-6">
+			<div>
+				<h1 class="text-3xl font-bold mb-2 text-gray-900">Dashboard</h1>
+				<p class="text-gray-600">Manage your secrets and TLS certificates</p>
+			</div>
+			<div class="flex items-center gap-4">
+				<label class="text-sm font-medium text-gray-700">Cluster:</label>
+				<select
+					x-model="selectedCluster"
+					x-on:change="htmx.trigger('body', 'refresh')"
+					class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+					hx-get={ fmt.Sprintf("/%s/api/v0/clusters", env) }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+					hx-target="this"
+					hx-on::after-swap="if(this.options.length > 0 && this.options[0].value) { selectedCluster = this.options[0].value; htmx.trigger('body', 'refresh'); }"
+				>
+					<option value="">Loading clusters...</option>
+				</select>
+			</div>
+		</div>
+
+		<div
+			id="statistics"
+			x-bind:hx-get={ fmt.Sprintf("'/%s/api/v0/statistics?cluster=' + (selectedCluster || '')", env) }
+			hx-trigger="load, refresh from:body"
+			hx-swap="innerHTML"
+			hx-target="this"
+		>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+				<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+					<h3 class="font-semibold text-lg mb-2 text-gray-700">Static Secrets</h3>
+					<p class="text-3xl font-bold text-gray-900">{ fmt.Sprintf("%d", stats.StaticSecretsCount) }</p>
+					<p class="text-sm text-gray-500 mt-2">Total static secrets</p>
+				</div>
+
+				<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+					<h3 class="font-semibold text-lg mb-2 text-gray-700">TLS Certificates</h3>
+					<p class="text-3xl font-bold text-gray-900">{ fmt.Sprintf("%d", stats.TLSCertificatesCount) }</p>
+					<p class="text-sm text-gray-500 mt-2">Total TLS certificates</p>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+

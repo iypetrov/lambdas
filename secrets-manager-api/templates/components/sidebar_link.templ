@@ -1,0 +1,24 @@
+package components
+
+import (
+	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
+)
+
+type SideBarLinkProps struct {
+	Name   string
+	URL    string
+	Active bool
+}
+
+templ SideBarLink(props SideBarLinkProps) {
+	<a
+		href={ props.URL }
+		class={ utils.TwMerge(
+			"flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors w-full text-left",
+			utils.IfElse(props.Active, "bg-gray-800 text-white", "text-gray-300 hover:bg-gray-800 hover:text-white"),
+		) }
+	>
+		<span>{ props.Name }</span>
+	</a>
+}
+

@@ -1,0 +1,132 @@
+package views
+
+import (
+	"fmt"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/button"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/form"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/input"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/textarea"
+)
+
+templ CreateTLSCertificateForm(env string) {
+	@form.Item() {
+		@form.Label(form.LabelProps{For: "cluster"}) {
+			Cluster Name
+		}
+		<select
+			name="cluster"
+			id="cluster-tls"
+			required
+			x-model="selectedCluster"
+			class="flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+			hx-get={ fmt.Sprintf("/%s/api/v0/clusters", env) }
+			hx-trigger="load"
+			hx-swap="innerHTML"
+			hx-target="this"
+			hx-on::after-swap="if(this.options.length > 0 && this.options[0].value) { selectedCluster = this.options[0].value; }"
+		>
+			<option value="">Loading clusters...</option>
+		</select>
+	}
+
+	@form.Item() {
+		@form.Label(form.LabelProps{For: "name"}) {
+			Certificate Name
+		}
+		@form.Description(form.DescriptionProps{}) {
+			The name will be prefixed with RESTRICTED.&lt;cluster&gt;.&lt;type&gt;.
+		}
+		@input.Input(input.Props{
+			Name: "name",
+			Type: input.TypeText,
+			Placeholder: "Enter certificate name",
+			Required: true,
+		})
+	}
+
+	@form.Item() {
+		@form.Label(form.LabelProps{For: "value"}) {
+			Certificate Value
+		}
+		@textarea.Textarea(textarea.Props{
+			Name: "value",
+			Placeholder: "Enter certificate value (PEM format)",
+			Rows: 6,
+			Required: true,
+			AutoResize: true,
+		})
+	}
+
+	<div class="mb-4" x-data="{ additionalTags: {}, newTagKey: '', newTagValue: '' }">
+		<label class="text-sm font-medium text-gray-700 mb-2 block">Additional Tags</label>
+		<div class="flex gap-2 mb-3">
+			@input.Input(input.Props{
+				Name: "new-tag-key",
+				Type: input.TypeText,
+				Placeholder: "Tag Key",
+				Attributes: templ.Attributes{
+					"x-model": "newTagKey",
+					"x-on:keydown.enter": "$event.preventDefault(); if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
+				},
+			})
+			@input.Input(input.Props{
+				Name: "new-tag-value",
+				Type: input.TypeText,
+				Placeholder: "Tag Value",
+				Attributes: templ.Attributes{
+					"x-model": "newTagValue",
+					"x-on:keydown.enter": "$event.preventDefault(); if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
+				},
+			})
+			@button.Button(button.Props{
+				Type: button.TypeButton,
+				Variant: button.VariantOutline,
+				Size: button.SizeSm,
+				Attributes: templ.Attributes{
+					"x-on:click": "if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
+				},
+			}) {
+				<span>Add</span>
+			}
+		</div>
+		<div class="flex flex-wrap gap-2 min-h-[2rem]">
+			<template x-for="(value, key) in additionalTags" :key="key">
+				<div class="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
+					<span class="font-medium text-blue-900" x-text="key"></span>
+					<span class="text-blue-700">:</span>
+					<span class="text-blue-800" x-text="value"></span>
+					<button
+						type="button"
+						x-on:click="delete additionalTags[key]"
+						class="ml-1 text-blue-600 hover:text-blue-800 font-bold"
+					>
+						×
+					</button>
+					<input type="hidden" x-bind:name="'additional_tags[' + key + ']'" x-bind:value="value" />
+				</div>
+			</template>
+		</div>
+	</div>
+
+	<div class="flex justify-end gap-3 mt-6">
+		@button.Button(button.Props{
+			Type: button.TypeButton,
+			Variant: button.VariantOutline,
+			Attributes: templ.Attributes{
+				"x-on:click": "showCreateTLSModal = false",
+			},
+		}) {
+			<span>Cancel</span>
+		}
+		@button.Button(button.Props{
+			Type: button.TypeSubmit,
+			Variant: button.VariantDefault,
+			Attributes: templ.Attributes{
+				"x-on:click": "showCreateTLSModal = false",
+			},
+		}) {
+			<span>Create</span>
+		}
+	</div>
+}
+

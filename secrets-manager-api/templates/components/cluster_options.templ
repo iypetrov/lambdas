@@ -1,15 +1,4 @@
-package views
-
-templ ClustersList(clusters []string) {
-	<div class="space-y-2">
-		for _, cluster := range clusters {
-			<div class="p-2 bg-gray-50 rounded">{ cluster }</div>
-		}
-		if len(clusters) == 0 {
-			<div class="p-2 text-gray-500">No clusters found</div>
-		}
-	</div>
-}
+package components
 
 templ ClusterOptions(clusters []string) {
 	if len(clusters) > 0 {

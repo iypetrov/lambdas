@@ -1,0 +1,82 @@
+package components
+
+import (
+	"fmt"
+	"net/url"
+	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/button"
+)
+
+templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
+	<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+		<table class="w-full">
+			<thead class="bg-gray-50">
+				<tr>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cluster</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="bg-white divide-y divide-gray-200">
+				if len(secrets) == 0 {
+					<tr>
+						<td colspan="4" class="px-6 py-8 text-center text-gray-500">
+							No certificates found. Create one to get started.
+						</td>
+					</tr>
+				} else {
+					for _, secret := range secrets {
+						<tr class="hover:bg-gray-50">
+							<td class="px-6 py-4 whitespace-nowrap">
+								<div class="text-sm font-medium text-gray-900">{ secret.Name }</div>
+							</td>
+							<td class="px-6 py-4 whitespace-nowrap">
+								<div class="text-sm text-gray-500">{ secret.Cluster }</div>
+							</td>
+							<td class="px-6 py-4 whitespace-nowrap">
+								<div class="text-sm text-gray-500">
+									if secret.CreatedDate != "" {
+										{ secret.CreatedDate }
+									} else {
+										<span class="text-gray-400">-</span>
+									}
+								</div>
+							</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+								<div class="flex gap-2">
+									@button.Button(button.Props{
+										Variant: button.VariantGhost,
+										Size: button.SizeSm,
+										Attributes: templ.Attributes{
+											"hx-get": fmt.Sprintf("/%s/api/v0/secrets/get?name=%s", env, url.QueryEscape(secret.Name)),
+											"hx-target": "#secret-value-modal",
+											"hx-swap": "innerHTML",
+											"hx-on::after-request": "showValueModal = true",
+										},
+									}) {
+										<span>View</span>
+									}
+									@button.Button(button.Props{
+										Variant: button.VariantDestructive,
+										Size: button.SizeSm,
+										Attributes: templ.Attributes{
+											"hx-delete": fmt.Sprintf("/%s/api/v0/secrets?name=%s", env, url.QueryEscape(secret.Name)),
+											"hx-confirm": "Are you sure you want to delete this certificate?",
+											"hx-target": "body",
+											"hx-swap": "none",
+											"hx-on::after-request": "if(event.detail.successful) { htmx.trigger('body', 'refresh'); }",
+										},
+									}) {
+										<span>Delete</span>
+									}
+								</div>
+							</td>
+						</tr>
+					}
+				}
+			</tbody>
+		</table>
+	</div>
+}
+

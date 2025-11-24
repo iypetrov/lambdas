@@ -10,6 +10,7 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/status"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/components"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/views"
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
 )
@@ -37,8 +38,15 @@ func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {
 		stats = &secrets.Statistics{}
 	}
 	
-	// Clusters are now loaded dynamically via HTMX, no need to fetch them here
-	utils.Render(w, r, views.HomePage(stats, string(hnd.config.App.Env)))
+	utils.Render(w, r, views.DashboardPage(stats, string(hnd.config.App.Env)))
+}
+
+func (hnd *RouterHandler) StaticSecretsView(w http.ResponseWriter, r *http.Request) {
+	utils.Render(w, r, views.StaticSecretsPage(string(hnd.config.App.Env)))
+}
+
+func (hnd *RouterHandler) TLSCertificatesView(w http.ResponseWriter, r *http.Request) {
+	utils.Render(w, r, views.TLSCertificatesPage(string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) error {
@@ -47,7 +55,7 @@ func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) 
 	stats, err := hnd.secretsService.GetStatistics(ctx, cluster)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptyStatistics())
+		return utils.Render(w, r, components.EmptyStatistics())
 	}
 	
 	return utils.Render(w, r, views.StatisticsView(stats))
@@ -60,7 +68,7 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 		hnd.log.Error("Failed to list clusters: %v", err)
 		clusters = []string{}
 	}
-	return utils.Render(w, r, views.ClusterOptions(clusters))
+	return utils.Render(w, r, components.ClusterOptions(clusters))
 }
 
 func (hnd *RouterHandler) ListSecrets(w http.ResponseWriter, r *http.Request) error {
@@ -78,20 +86,23 @@ func (hnd *RouterHandler) ListSecrets(w http.ResponseWriter, r *http.Request) er
 	secretsList, err := hnd.secretsService.ListSecrets(ctx, st, cluster)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 
-	return utils.Render(w, r, views.SecretsTable(secretsList, secretType, string(hnd.config.App.Env)))
+	if secretType == "tls" {
+		return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
+	} else {
+		return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env)))
+	}
 }
 
 func (hnd *RouterHandler) CreateSecret(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	var req secrets.CreateSecretRequest
 	
-	// Parse form data
 	if err := r.ParseForm(); err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 	
 	req.Name = r.FormValue("name")
@@ -122,25 +133,23 @@ func (hnd *RouterHandler) CreateSecret(w http.ResponseWriter, r *http.Request) e
 
 	if req.Cluster == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 
 	resp, err := hnd.secretsService.CreateSecret(ctx, req)
 	if err != nil {
 		if contains(err.Error(), "already exists") {
 			status.AddToast(w, status.ErrorConflict(err))
-			return utils.Render(w, r, views.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptySecretsTable())
 		}
 		if contains(err.Error(), "invalid request") {
 			status.AddToast(w, status.ErrorBadRequest(err))
-			return utils.Render(w, r, views.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptySecretsTable())
 		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 	
-	// Trigger refresh and show success toast
-	w.Header().Set("HX-Trigger", "refresh")
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Secret '%s' created successfully", resp.Name),
 		StatusCode: http.StatusCreated,
@@ -153,20 +162,20 @@ func (hnd *RouterHandler) GetSecret(w http.ResponseWriter, r *http.Request) erro
 	secretName := r.URL.Query().Get("name")
 	if secretName == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("secret name is required")))
-		return utils.Render(w, r, views.EmptyModal())
+		return utils.Render(w, r, components.EmptyModal())
 	}
 
 	resp, err := hnd.secretsService.GetSecret(ctx, secretName)
 	if err != nil {
 		if contains(err.Error(), "not found") {
 			status.AddToast(w, status.ErrorNotFound(err))
-			return utils.Render(w, r, views.EmptyModal())
+			return utils.Render(w, r, components.EmptyModal())
 		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptyModal())
+		return utils.Render(w, r, components.EmptyModal())
 	}
 	
-	return utils.Render(w, r, views.SecretValueModal(resp.Value, secretName))
+	return utils.Render(w, r, components.SecretValueModal(resp.Value, secretName))
 }
 
 func (hnd *RouterHandler) UpdateSecret(w http.ResponseWriter, r *http.Request) error {
@@ -174,7 +183,7 @@ func (hnd *RouterHandler) UpdateSecret(w http.ResponseWriter, r *http.Request) e
 	
 	if err := r.ParseForm(); err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 	
 	req := secrets.UpdateSecretRequest{
@@ -186,14 +195,12 @@ func (hnd *RouterHandler) UpdateSecret(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		if contains(err.Error(), "not found") {
 			status.AddToast(w, status.ErrorNotFound(err))
-			return utils.Render(w, r, views.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptySecretsTable())
 		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 	
-	// Trigger refresh and show success toast
-	w.Header().Set("HX-Trigger", "refresh")
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Secret '%s' updated successfully", resp.Name),
 		StatusCode: http.StatusOK,
@@ -206,25 +213,23 @@ func (hnd *RouterHandler) DeleteSecret(w http.ResponseWriter, r *http.Request) e
 	secretName := r.URL.Query().Get("name")
 	if secretName == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("secret name is required")))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 
 	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
 	if err != nil {
 		if contains(err.Error(), "not found") {
 			status.AddToast(w, status.ErrorNotFound(err))
-			return utils.Render(w, r, views.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptySecretsTable())
 		}
 		if contains(err.Error(), "already scheduled") {
 			status.AddToast(w, status.ErrorBadRequest(err))
-			return utils.Render(w, r, views.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptySecretsTable())
 		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, views.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptySecretsTable())
 	}
 	
-	// Trigger refresh and show success toast
-	w.Header().Set("HX-Trigger", "refresh")
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Secret '%s' deleted successfully", resp.Name),
 		StatusCode: http.StatusOK,
