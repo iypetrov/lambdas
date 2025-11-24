@@ -2,7 +2,6 @@ package secrets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
-	"github.com/aws/smithy-go"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
 )
@@ -87,25 +85,11 @@ func (s *Service) CreateSecret(ctx context.Context, req CreateSecretRequest) (*C
 
 	result, err := s.client.CreateSecret(ctx, createReq)
 	if err != nil {
-		var ae smithy.APIError
-		if strings.Contains(err.Error(), "ResourceExistsException") {
-			s.log.Error("Secret already exists: %s", secretName)
-			return nil, fmt.Errorf("secret already exists: %s", secretName)
-		}
-		if strings.Contains(err.Error(), "InvalidRequestException") {
-			s.log.Error("Invalid request creating secret %s: %v", secretName, err)
-			return nil, fmt.Errorf("invalid request creating secret: %s", secretName)
-		}
-		if errors.As(err, &ae) {
-			s.log.Error("AWS error creating secret %s: %v", secretName, err)
-			return nil, fmt.Errorf("AWS error creating secret: %s", err.Error())
-		}
-		s.log.Error("Unexpected error creating secret %s: %v", secretName, err)
-		return nil, fmt.Errorf("unexpected error creating secret: %s", err.Error())
+		s.log.Error("Error creating secret %s: %v", secretName, err)
+		return nil, fmt.Errorf("%s", err.Error())
 	}
 
 	s.log.Info("Created secret %s", *result.ARN)
-
 	return &CreateSecretResponse{
 		Name:      *result.Name,
 		ARN:       *result.ARN,
@@ -120,21 +104,11 @@ func (s *Service) GetSecret(ctx context.Context, secretName string) (*GetSecretR
 
 	result, err := s.client.GetSecretValue(ctx, getReq)
 	if err != nil {
-		var ae smithy.APIError
-		if strings.Contains(err.Error(), "ResourceNotFoundException") {
-			s.log.Error("Secret not found: %s", secretName)
-			return nil, fmt.Errorf("secret not found: %s", secretName)
-		}
-		if errors.As(err, &ae) {
-			s.log.Error("AWS error getting secret %s: %v", secretName, err)
-			return nil, fmt.Errorf("AWS error getting secret: %s", err.Error())
-		}
-		s.log.Error("Unexpected error getting secret %s: %v", secretName, err)
-		return nil, fmt.Errorf("unexpected error getting secret: %s", err.Error())
+		s.log.Error("Error retrieving secret %s: %v", secretName, err)
+		return nil, fmt.Errorf("%s", err.Error())
 	}
 
 	s.log.Info("Retrieved secret %s", secretName)
-
 	return &GetSecretResponse{
 		Value: *result.SecretString,
 	}, nil
@@ -148,21 +122,11 @@ func (s *Service) UpdateSecret(ctx context.Context, req UpdateSecretRequest) (*U
 
 	result, err := s.client.PutSecretValue(ctx, putReq)
 	if err != nil {
-		var ae smithy.APIError
-		if strings.Contains(err.Error(), "ResourceNotFoundException") {
-			s.log.Error("Secret not found for update: %s", req.Name)
-			return nil, fmt.Errorf("secret not found: %s", req.Name)
-		}
-		if errors.As(err, &ae) {
-			s.log.Error("AWS error updating secret %s: %v", req.Name, err)
-			return nil, fmt.Errorf("AWS error updating secret: %s", err.Error())
-		}
 		s.log.Error("Unexpected error updating secret %s: %v", req.Name, err)
 		return nil, fmt.Errorf("unexpected error updating secret: %s", err.Error())
 	}
 
 	s.log.Info("Updated secret %s", *result.ARN)
-
 	return &UpdateSecretResponse{
 		Name:      *result.Name,
 		ARN:       *result.ARN,
@@ -171,7 +135,6 @@ func (s *Service) UpdateSecret(ctx context.Context, req UpdateSecretRequest) (*U
 }
 
 func (s *Service) DeleteSecret(ctx context.Context, secretName string) (*DeleteSecretResponse, error) {
-	// Check if secret is already scheduled for deletion
 	describeReq := &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretName),
 	}
@@ -189,18 +152,8 @@ func (s *Service) DeleteSecret(ctx context.Context, secretName string) (*DeleteS
 		SecretId:                aws.String(secretName),
 		ForceDeleteWithoutRecovery: aws.Bool(true),
 	}
-
 	result, err := s.client.DeleteSecret(ctx, deleteReq)
 	if err != nil {
-		var ae smithy.APIError
-		if strings.Contains(err.Error(), "ResourceNotFoundException") {
-			s.log.Error("Secret not found for deletion: %s", secretName)
-			return nil, fmt.Errorf("secret not found: %s", secretName)
-		}
-		if errors.As(err, &ae) {
-			s.log.Error("AWS error deleting secret %s: %v", secretName, err)
-			return nil, fmt.Errorf("AWS error deleting secret: %s", err.Error())
-		}
 		s.log.Error("Unexpected error deleting secret %s: %v", secretName, err)
 		return nil, fmt.Errorf("unexpected error deleting secret: %s", err.Error())
 	}
@@ -211,7 +164,6 @@ func (s *Service) DeleteSecret(ctx context.Context, secretName string) (*DeleteS
 	}
 
 	s.log.Info("Deleted secret %s", *result.ARN)
-
 	return &DeleteSecretResponse{
 		Name:         *result.Name,
 		ARN:          *result.ARN,
@@ -252,7 +204,6 @@ func (s *Service) ListSecrets(ctx context.Context, secretType SecretType, cluste
 				}
 			}
 
-			// Only include secrets that match the requested type and cluster
 			if secretTypeTag == string(secretType) && (cluster == "" || secretCluster == cluster) {
 				var createdDate string
 				if secret.CreatedDate != nil {

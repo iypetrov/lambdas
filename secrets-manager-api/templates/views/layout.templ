@@ -74,8 +74,9 @@ templ Layout(props LayoutProps) {
 						</h3>
 						<form
 							hx-post={ fmt.Sprintf("/%s/api/v0/secrets", props.Env) }
-							hx-swap="none"
-							@htmx:after-request="showCreateStaticModal = false; htmx.trigger('body', 'refresh')"
+							hx-target="#static-secrets-table"
+							hx-swap="innerHTML"
+							@htmx:after-request="showCreateStaticModal = false"
 						>
 							<input type="hidden" name="type" value="Static Secret" />
 							
@@ -113,8 +114,9 @@ templ Layout(props LayoutProps) {
 						</h3>
 						<form
 							hx-post={ fmt.Sprintf("/%s/api/v0/secrets", props.Env) }
-							hx-swap="none"
-							@htmx:after-request="showCreateTLSModal = false; htmx.trigger('body', 'refresh')"
+							hx-target="#tls-certificates-table"
+							hx-swap="innerHTML"
+							@htmx:after-request="showCreateTLSModal = false"
 						>
 							<input type="hidden" name="type" value="TLS Certificate" />
 							
