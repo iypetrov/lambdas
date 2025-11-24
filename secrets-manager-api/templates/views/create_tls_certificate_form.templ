@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/button"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/form"
+	"github.com/iypetrov/lambdas/secrets-manager-api/templates/icon"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/input"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/textarea"
 )
@@ -125,7 +126,11 @@ templ CreateTLSCertificateForm(env string) {
 				"x-on:click": "showCreateTLSModal = false",
 			},
 		}) {
-			<span>Create</span>
+			<span class="button-text">Create</span>
+			@icon.LoaderCircle(icon.Props{
+				Size: 16,
+				Class: "htmx-indicator animate-spin",
+			})
 		}
 	</div>
 }
