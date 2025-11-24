@@ -7,6 +7,45 @@ const (
 	SecretTypeTLSCertificate SecretType = "TLS Certificate"
 )
 
+// Protected tag keys that cannot be modified or deleted
+const (
+	ProtectedTagCategory   = "Category"
+	ProtectedTagCluster    = "Cluster"
+	ProtectedTagType       = "Type"
+	ProtectedTagManagedBy  = "ManagedBy"
+)
+
+// ProtectedTags is a set of protected tag keys
+var ProtectedTags = map[string]bool{
+	ProtectedTagCategory:  true,
+	ProtectedTagCluster:   true,
+	ProtectedTagType:      true,
+	ProtectedTagManagedBy: true,
+}
+
+// IsProtectedTag checks if a tag key is protected
+func IsProtectedTag(tagKey string) bool {
+	return ProtectedTags[tagKey]
+}
+
+// TagMap is an ordered map of tags (key-value pairs)
+type TagMap []TagPair
+
+// TagPair represents a single tag key-value pair
+type TagPair struct {
+	Key   string
+	Value string
+}
+
+// ToMap converts TagMap to a regular map for backward compatibility
+func (tm TagMap) ToMap() map[string]string {
+	result := make(map[string]string, len(tm))
+	for _, pair := range tm {
+		result[pair.Key] = pair.Value
+	}
+	return result
+}
+
 type Secret struct {
 	Name        string            `json:"name"`
 	ARN         string            `json:"arn"`
@@ -62,7 +101,7 @@ type GetSecretDetailsResponse struct {
 	ARN          string            `json:"arn"`
 	Type         SecretType        `json:"type"`
 	Cluster      string            `json:"cluster"`
-	Tags         map[string]string `json:"tags"`
+	Tags         TagMap            `json:"tags"`
 	VersionID    string            `json:"version_id,omitempty"`
 	CreatedDate  string            `json:"created_date,omitempty"`
 	LastChangedDate string         `json:"last_changed_date,omitempty"`

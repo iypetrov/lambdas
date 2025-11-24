@@ -422,6 +422,12 @@ func (hnd *RouterHandler) AddTag(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
+	// Prevent adding/overwriting protected tags
+	if secrets.IsProtectedTag(req.Key) {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot modify protected tag '%s'", req.Key)))
+		return nil
+	}
+
 	_, err := hnd.secretsService.AddTag(ctx, req)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
@@ -457,6 +463,12 @@ func (hnd *RouterHandler) RemoveTag(w http.ResponseWriter, r *http.Request) erro
 
 	if secretName == "" || tagKey == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("name and key are required")))
+		return nil
+	}
+
+	// Prevent deletion of protected tags
+	if secrets.IsProtectedTag(tagKey) {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot delete protected tag '%s'", tagKey)))
 		return nil
 	}
 

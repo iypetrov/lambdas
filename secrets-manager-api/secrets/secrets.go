@@ -3,6 +3,7 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -241,13 +242,13 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		return nil, fmt.Errorf("%s", err.Error())
 	}
 
-	tags := make(map[string]string)
+	tagsMap := make(map[string]string)
 	var secretType SecretType
 	var cluster string
 
 	for _, tag := range result.Tags {
 		if tag.Key != nil && tag.Value != nil {
-			tags[*tag.Key] = *tag.Value
+			tagsMap[*tag.Key] = *tag.Value
 			if *tag.Key == "Type" {
 				if *tag.Value == string(SecretTypeStaticSecret) {
 					secretType = SecretTypeStaticSecret
@@ -259,6 +260,21 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 				cluster = *tag.Value
 			}
 		}
+	}
+
+	// Sort tag keys alphabetically and create ordered TagMap
+	sortedTagKeys := make([]string, 0, len(tagsMap))
+	for key := range tagsMap {
+		sortedTagKeys = append(sortedTagKeys, key)
+	}
+	sort.Strings(sortedTagKeys)
+
+	tags := make(TagMap, 0, len(sortedTagKeys))
+	for _, key := range sortedTagKeys {
+		tags = append(tags, TagPair{
+			Key:   key,
+			Value: tagsMap[key],
+		})
 	}
 
 	var createdDate string
@@ -398,3 +414,4 @@ func (s *Service) GetStatistics(ctx context.Context, cluster string) (*Statistic
 		TLSCertificatesCount: len(tlsCertificates),
 	}, nil
 }
+
