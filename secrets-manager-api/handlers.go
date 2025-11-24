@@ -78,6 +78,7 @@ func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Don't fetch secret value for security - it won't be displayed or pre-filled
 	utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
 }
 
@@ -104,6 +105,7 @@ func (hnd *RouterHandler) TLSCertificateDetailView(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Don't fetch secret value for security - it won't be displayed or pre-filled
 	utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
 }
 
@@ -296,29 +298,72 @@ func (hnd *RouterHandler) UpdateSecret(w http.ResponseWriter, r *http.Request) e
 
 	if err := r.ParseForm(); err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return nil
+	}
+
+	secretName := r.FormValue("name")
+	value := r.FormValue("value")
+	crt := r.FormValue("crt")
+	key := r.FormValue("key")
+
+	// For TLS certificates, combine crt and key if provided
+	if crt != "" || key != "" {
+		if crt == "" || key == "" {
+			status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
+			return nil
+		}
+		value = strings.TrimSpace(crt) + "\n" + strings.TrimSpace(key)
 	}
 
 	req := secrets.UpdateSecretRequest{
-		Name:  r.FormValue("name"),
-		Value: r.FormValue("value"),
+		Name:  secretName,
+		Value: value,
 	}
 
 	resp, err := hnd.secretsService.UpdateSecret(ctx, req)
 	if err != nil {
 		if contains(err.Error(), "not found") {
 			status.AddToast(w, status.ErrorNotFound(err))
-			return utils.Render(w, r, components.EmptySecretsTable())
+			return nil
 		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return nil
 	}
 
+	// Get updated details to render the page
+	details, err := hnd.secretsService.GetSecretDetails(ctx, secretName)
+	if err != nil {
+		hnd.log.Error("Failed to get secret details after update: %v", err)
+		status.AddToast(w, status.Toast{
+			Message:    fmt.Sprintf("Secret '%s' updated successfully", resp.Name),
+			StatusCode: http.StatusOK,
+		})
+		// Still redirect even if we can't get details
+		encodedName := base64.URLEncoding.EncodeToString([]byte(secretName))
+		var redirectPath string
+		if strings.Contains(secretName, "TLS_CERTIFICATE") {
+			redirectPath = fmt.Sprintf("/%s/p/tls-certificates/%s", hnd.config.App.Env, encodedName)
+		} else {
+			redirectPath = fmt.Sprintf("/%s/p/static-secrets/%s", hnd.config.App.Env, encodedName)
+		}
+		utils.HxRedirect(w, redirectPath)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte{})
+		return nil
+	}
+
+	// Add toast and render the page - the HX-Trigger header should work with HTMX
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Secret '%s' updated successfully", resp.Name),
 		StatusCode: http.StatusOK,
 	})
-	return nil
+
+	// Render the detail page directly - HTMX will process the HX-Trigger header
+	if strings.Contains(secretName, "TLS_CERTIFICATE") {
+		return utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
+	} else {
+		return utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
+	}
 }
 
 func (hnd *RouterHandler) DeleteSecret(w http.ResponseWriter, r *http.Request) error {

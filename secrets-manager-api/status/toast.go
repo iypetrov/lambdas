@@ -24,5 +24,9 @@ func AddToast(w http.ResponseWriter, t Toast) {
 	if err != nil {
 		return
 	}
+	// Use HX-Trigger-After-Settle to ensure the event fires after Alpine.js re-initializes
+	// This is important when replacing the entire body content
+	w.Header().Set("HX-Trigger-After-Settle", string(res))
+	// Also set HX-Trigger for cases where we're not replacing the body
 	w.Header().Set("HX-Trigger", string(res))
 }
