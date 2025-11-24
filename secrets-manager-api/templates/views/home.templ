@@ -153,8 +153,8 @@ templ HomePage(stats *secrets.Statistics, env string) {
 				x-transition:leave="transition ease-in duration-200"
 				x-transition:leave-start="opacity-100"
 				x-transition:leave-end="opacity-0"
-				class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-				style="display: none;"
+				class="fixed inset-0 z-50 flex items-center justify-center"
+				style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
 				x-on:click.self="showCreateModal = false"
 			>
 				<div
@@ -173,7 +173,7 @@ templ HomePage(stats *secrets.Statistics, env string) {
 						<form
 							hx-post={ fmt.Sprintf("/%s/api/v0/secrets", env) }
 							hx-swap="none"
-							hx-on::after-request="if(event.detail.successful) { showCreateModal = false; htmx.trigger('body', 'refresh'); }"
+							@htmx:after-request="if($event.detail.successful) { showCreateModal = false; htmx.trigger('body', 'refresh'); }"
 						>
 							<input type="hidden" name="type" x-bind:value="secretType === 'static' ? 'Static Secret' : 'TLS Certificate'" />
 							
@@ -225,34 +225,51 @@ templ HomePage(stats *secrets.Statistics, env string) {
 								})
 							}
 
-							<div class="mb-4" x-data="{ additionalTags: {} }">
-								<div class="flex justify-between items-center mb-2">
-									<label class="text-sm font-medium text-gray-700">Additional Tags</label>
+							<div class="mb-4" x-data="{ additionalTags: {}, newTagKey: '', newTagValue: '' }">
+								<label class="text-sm font-medium text-gray-700 mb-2 block">Additional Tags</label>
+								<div class="flex gap-2 mb-3">
+									@input.Input(input.Props{
+										Name: "new-tag-key",
+										Type: input.TypeText,
+										Placeholder: "Tag Key",
+										Attributes: templ.Attributes{
+											"x-model": "newTagKey",
+											"x-on:keydown.enter": "$event.preventDefault(); if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
+										},
+									})
+									@input.Input(input.Props{
+										Name: "new-tag-value",
+										Type: input.TypeText,
+										Placeholder: "Tag Value",
+										Attributes: templ.Attributes{
+											"x-model": "newTagValue",
+											"x-on:keydown.enter": "$event.preventDefault(); if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
+										},
+									})
 									@button.Button(button.Props{
 										Type: button.TypeButton,
 										Variant: button.VariantOutline,
 										Size: button.SizeSm,
 										Attributes: templ.Attributes{
-											"x-on:click": "const key = prompt('Tag Key:'); const value = prompt('Tag Value:'); if(key && value) { additionalTags[key] = value; }",
+											"x-on:click": "if(newTagKey && newTagValue) { additionalTags[newTagKey] = newTagValue; newTagKey = ''; newTagValue = ''; }",
 										},
 									}) {
-										<span>+ Add Tag</span>
+										<span>Add</span>
 									}
 								</div>
-								<div class="space-y-2" x-show="Object.keys(additionalTags).length > 0">
+								<div class="flex flex-wrap gap-2 min-h-[2rem]">
 									<template x-for="(value, key) in additionalTags" :key="key">
-										<div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
-											<span class="text-sm font-medium" x-text="key + ': ' + value"></span>
-											@button.Button(button.Props{
-												Type: button.TypeButton,
-												Variant: button.VariantGhost,
-												Size: button.SizeSm,
-												Attributes: templ.Attributes{
-													"x-on:click": "delete additionalTags[key]",
-												},
-											}) {
-												<span>×</span>
-											}
+										<div class="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm">
+											<span class="font-medium text-blue-900" x-text="key"></span>
+											<span class="text-blue-700">:</span>
+											<span class="text-blue-800" x-text="value"></span>
+											<button
+												type="button"
+												x-on:click="delete additionalTags[key]"
+												class="ml-1 text-blue-600 hover:text-blue-800 font-bold"
+											>
+												×
+											</button>
 											<input type="hidden" x-bind:name="'additional_tags[' + key + ']'" x-bind:value="value" />
 										</div>
 									</template>
