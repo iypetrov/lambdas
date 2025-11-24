@@ -16,7 +16,7 @@ templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
 					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
 					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cluster</th>
 					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-					<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+					<th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 				</tr>
 			</thead>
 			<tbody class="bg-white divide-y divide-gray-200">
@@ -30,7 +30,13 @@ templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
 					for _, secret := range secrets {
 						<tr class="hover:bg-gray-50">
 							<td class="px-6 py-4 whitespace-nowrap">
-								<div class="text-sm font-medium text-gray-900">{ secret.Name }</div>
+								<a href="#" class="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer" 
+									hx-get={ fmt.Sprintf("/%s/api/v0/secrets/get?name=%s", env, url.QueryEscape(secret.Name)) }
+									hx-target="#secret-value-modal"
+									hx-swap="innerHTML"
+									hx-on::after-request="showValueModal = true">
+									{ secret.Name }
+								</a>
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap">
 								<div class="text-sm text-gray-500">{ secret.Cluster }</div>
@@ -44,20 +50,8 @@ templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
 									}
 								</div>
 							</td>
-							<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-								<div class="flex gap-2">
-									@button.Button(button.Props{
-										Variant: button.VariantGhost,
-										Size: button.SizeSm,
-										Attributes: templ.Attributes{
-											"hx-get": fmt.Sprintf("/%s/api/v0/secrets/get?name=%s", env, url.QueryEscape(secret.Name)),
-											"hx-target": "#secret-value-modal",
-											"hx-swap": "innerHTML",
-											"hx-on::after-request": "showValueModal = true",
-										},
-									}) {
-										<span>View</span>
-									}
+							<td class="px-2 py-4 whitespace-nowrap text-sm font-medium">
+								<div class="flex justify-end">
 									@button.Button(button.Props{
 										Variant: button.VariantDestructive,
 										Size: button.SizeSm,
