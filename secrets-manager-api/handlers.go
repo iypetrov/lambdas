@@ -8,6 +8,7 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
+	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/status"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/views"
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
@@ -20,6 +21,7 @@ type RouterHandler struct {
 	config        config.Config
 	log           logger.Logger
 	secretsService *secrets.Service
+	clusterService *clusters.Service
 }
 
 func (hnd *RouterHandler) StaticFiles() http.Handler {
@@ -35,7 +37,7 @@ func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {
 		stats = &secrets.Statistics{}
 	}
 	
-	clusters, err := hnd.secretsService.ListClusters(ctx)
+	clusters, err := hnd.clusterService.GetAllClusters(ctx)
 	if err != nil {
 		hnd.log.Error("Failed to list clusters: %v", err)
 		clusters = []string{}
@@ -58,7 +60,7 @@ func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) 
 
 func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	clusters, err := hnd.secretsService.ListClusters(ctx)
+	clusters, err := hnd.clusterService.GetAllClusters(ctx)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return utils.Render(w, r, views.ClustersList([]string{}))

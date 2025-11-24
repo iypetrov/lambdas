@@ -12,15 +12,18 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
+	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 )
 
 func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *chi.Mux {
-	secretsService := secrets.NewService(ctx, cfg, log)
+	secretService := secrets.NewService(ctx, cfg, log)
+	clusterService := clusters.NewService(ctx, cfg, log)
 
 	handler := RouterHandler{
 		config:        cfg,
 		log:           log,
-		secretsService: secretsService,
+		secretsService: secretService,
+		clusterService: clusterService,
 	}
 
 	return NewRouter(handler)
@@ -40,6 +43,7 @@ func main() {
 	cfg := config.New()
 	log := logger.New(cfg)
 
+	log.Info("Starting Secrets Manager API in %s environment", cfg.App.Env)
 	if cfg.App.Env == config.Local {
 	 	http.ListenAndServe(":8080", configServer(ctx, cfg, log))
 	} else {
