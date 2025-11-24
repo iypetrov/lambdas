@@ -164,13 +164,22 @@ func (hnd *RouterHandler) CreateSecret(w http.ResponseWriter, r *http.Request) e
 	}
 
 	req.Name = r.FormValue("name")
-	req.Value = r.FormValue("value")
 	req.Cluster = r.FormValue("cluster")
 	typeStr := r.FormValue("type")
 	if typeStr == "Static Secret" {
 		req.Type = secrets.SecretTypeStaticSecret
+		req.Value = r.FormValue("value")
 	} else {
 		req.Type = secrets.SecretTypeTLSCertificate
+		// For TLS certificates, combine crt and key fields
+		crt := r.FormValue("crt")
+		key := r.FormValue("key")
+		if crt == "" || key == "" {
+			status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
+			return utils.Render(w, r, components.EmptySecretsTable())
+		}
+		// Combine certificate and key with newline separator (standard PEM format)
+		req.Value = strings.TrimSpace(crt) + "\n" + strings.TrimSpace(key)
 	}
 
 	// // Parse additional tags

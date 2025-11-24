@@ -46,12 +46,31 @@ templ CreateTLSCertificateForm(env string) {
 	}
 
 	@form.Item() {
-		@form.Label(form.LabelProps{For: "value"}) {
-			Certificate Value
+		@form.Label(form.LabelProps{For: "crt"}) {
+			Certificate (CRT)
+		}
+		@form.Description(form.DescriptionProps{}) {
+			Enter the certificate in PEM format.
 		}
 		@textarea.Textarea(textarea.Props{
-			Name: "value",
-			Placeholder: "Enter certificate value (PEM format)",
+			Name: "crt",
+			Placeholder: "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+			Rows: 6,
+			Required: true,
+			AutoResize: true,
+		})
+	}
+
+	@form.Item() {
+		@form.Label(form.LabelProps{For: "key"}) {
+			Private Key (KEY)
+		}
+		@form.Description(form.DescriptionProps{}) {
+			Enter the private key in PEM format.
+		}
+		@textarea.Textarea(textarea.Props{
+			Name: "key",
+			Placeholder: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
 			Rows: 6,
 			Required: true,
 			AutoResize: true,
