@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -415,3 +416,36 @@ func (s *Service) GetStatistics(ctx context.Context, cluster string) (*Statistic
 	}, nil
 }
 
+// MarshalTLSCertificateData marshals TLS certificate data to JSON string
+func MarshalTLSCertificateData(crt, key string) (string, error) {
+	data := TLSCertificateData{
+		Crt: strings.TrimSpace(crt),
+		Key: strings.TrimSpace(key),
+	}
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal TLS certificate data: %w", err)
+	}
+	return string(jsonBytes), nil
+}
+
+// UnmarshalTLSCertificateData unmarshals TLS certificate data from JSON string
+// It also supports backward compatibility with the old format (crt\nkey)
+func UnmarshalTLSCertificateData(value string) (*TLSCertificateData, error) {
+	// Try to parse as JSON first
+	var data TLSCertificateData
+	if err := json.Unmarshal([]byte(value), &data); err == nil {
+		return &data, nil
+	}
+
+	// If JSON parsing fails, try the old format (crt\nkey)
+	parts := strings.SplitN(value, "\n", 2)
+	if len(parts) == 2 {
+		return &TLSCertificateData{
+			Crt: strings.TrimSpace(parts[0]),
+			Key: strings.TrimSpace(parts[1]),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("invalid TLS certificate data format")
+}

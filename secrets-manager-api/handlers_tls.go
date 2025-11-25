@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
@@ -66,7 +65,20 @@ func (hnd *RouterHandler) GetTLSCertificate(w http.ResponseWriter, r *http.Reque
 		return utils.Render(w, r, components.EmptyModal())
 	}
 
-	return utils.Render(w, r, components.SecretValueModal(resp.Value, secretName))
+	// Parse TLS certificate data (supports both JSON and legacy format)
+	tlsData, err := secrets.UnmarshalTLSCertificateData(resp.Value)
+	if err != nil {
+		// If parsing fails, display raw value
+		return utils.Render(w, r, components.SecretValueModal(resp.Value, secretName))
+	}
+
+	// Format as JSON for display
+	formattedValue := fmt.Sprintf(`{
+  "crt": %q,
+  "key": %q
+}`, tlsData.Crt, tlsData.Key)
+
+	return utils.Render(w, r, components.SecretValueModal(formattedValue, secretName))
 }
 
 func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Request) error {
@@ -95,15 +107,20 @@ func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Re
 	req.Cluster = r.FormValue("cluster")
 	req.Type = secrets.SecretTypeTLSCertificate
 
-	// For TLS certificates, combine crt and key fields
+	// For TLS certificates, combine crt and key fields as JSON
 	crt := r.FormValue("crt")
 	key := r.FormValue("key")
 	if crt == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return utils.Render(w, r, components.EmptySecretsTable())
 	}
-	// Combine certificate and key with newline separator (standard PEM format)
-	req.Value = strings.TrimSpace(crt) + "\n" + strings.TrimSpace(key)
+	// Marshal certificate and key as JSON
+	jsonValue, err := secrets.MarshalTLSCertificateData(crt, key)
+	if err != nil {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("failed to encode TLS certificate data: %v", err)))
+		return utils.Render(w, r, components.EmptySecretsTable())
+	}
+	req.Value = jsonValue
 
 	if req.Cluster == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
@@ -194,7 +211,12 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return nil
 	}
-	value := strings.TrimSpace(crt) + "\n" + strings.TrimSpace(key)
+	// Marshal certificate and key as JSON
+	value, err := secrets.MarshalTLSCertificateData(crt, key)
+	if err != nil {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("failed to encode TLS certificate data: %v", err)))
+		return nil
+	}
 
 	req := secrets.UpdateSecretRequest{
 		Name:  secretName,

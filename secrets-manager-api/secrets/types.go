@@ -125,3 +125,9 @@ type UpdateTagsResponse struct {
 	ARN  string `json:"arn"`
 }
 
+// TLSCertificateData represents the structure for TLS certificate data stored as JSON
+type TLSCertificateData struct {
+	Crt string `json:"crt"`
+	Key string `json:"key"`
+}
+
