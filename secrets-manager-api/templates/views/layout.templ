@@ -58,7 +58,7 @@ templ Layout(props LayoutProps) {
 				class="fixed inset-0 z-50 flex items-center justify-center"
 				style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
 				x-on:click.self="showCreateStaticModal = false; htmx.trigger('body', 'refresh')"
-				x-effect="if (showCreateStaticModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=\"additionalTags\"]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
+				x-effect="if (showCreateStaticModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=additionalTags]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
 			>
 				<div
 					class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
@@ -74,13 +74,11 @@ templ Layout(props LayoutProps) {
 							Create Static Secret
 						</h3>
 						<form
-							hx-post={ fmt.Sprintf("/%s/api/v0/secrets", props.Env) }
+							hx-post={ fmt.Sprintf("/%s/api/v0/static-secrets", props.Env) }
 							hx-target="#static-secrets-table"
 							hx-swap="innerHTML"
 							@htmx:after-request="showCreateStaticModal = false"
 						>
-							<input type="hidden" name="type" value="Static Secret" />
-							
 							@CreateStaticSecretForm(props.Env)
 						</form>
 					</div>
@@ -99,7 +97,7 @@ templ Layout(props LayoutProps) {
 				class="fixed inset-0 z-50 flex items-center justify-center"
 				style="background-color: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
 				x-on:click.self="showCreateTLSModal = false; htmx.trigger('body', 'refresh')"
-				x-effect="if (showCreateTLSModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=\"additionalTags\"]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
+				x-effect="if (showCreateTLSModal) { setTimeout(() => { const form = $el.querySelector('form'); if (form) { form.reset(); const tagSection = form.querySelector('[x-data*=additionalTags]'); if (tagSection) { const data = Alpine.$data(tagSection); if (data) { data.additionalTags = {}; data.newTagKey = ''; data.newTagValue = ''; } } } }, 50); }"
 			>
 				<div
 					class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
@@ -115,13 +113,11 @@ templ Layout(props LayoutProps) {
 							Create TLS Certificate
 						</h3>
 						<form
-							hx-post={ fmt.Sprintf("/%s/api/v0/secrets", props.Env) }
+							hx-post={ fmt.Sprintf("/%s/api/v0/tls-certificates", props.Env) }
 							hx-target="#tls-certificates-table"
 							hx-swap="innerHTML"
 							@htmx:after-request="showCreateTLSModal = false"
 						>
-							<input type="hidden" name="type" value="TLS Certificate" />
-							
 							@CreateTLSCertificateForm(props.Env)
 						</form>
 					</div>

@@ -28,14 +28,27 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 		mux.Route("/v0", func(mux chi.Router) {
 			mux.Get("/statistics", utils.MakeTemplHandler(hnd.GetStatistics))
 			mux.Get("/clusters", utils.MakeTemplHandler(hnd.ListClusters))
-			mux.Route("/secrets", func(mux chi.Router) {
-				mux.Get("/", utils.MakeTemplHandler(hnd.ListSecrets))
-				mux.Post("/", utils.MakeTemplHandler(hnd.CreateSecret))
-				mux.Get("/get", utils.MakeTemplHandler(hnd.GetSecret))
-				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateSecret))
-				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteSecret))
-				mux.Post("/tags", utils.MakeTemplHandler(hnd.AddTag))
-				mux.Delete("/tags", utils.MakeTemplHandler(hnd.RemoveTag))
+
+			// Static Secrets routes
+			mux.Route("/static-secrets", func(mux chi.Router) {
+				mux.Get("/", utils.MakeTemplHandler(hnd.ListStaticSecrets))
+				mux.Post("/tags", utils.MakeTemplHandler(hnd.AddStaticSecretTag))
+				mux.Delete("/tags", utils.MakeTemplHandler(hnd.RemoveStaticSecretTag))
+				mux.Get("/{name}", utils.MakeTemplHandler(hnd.GetStaticSecret))
+				mux.Post("/", utils.MakeTemplHandler(hnd.CreateStaticSecret))
+				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateStaticSecret))
+				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteStaticSecret))
+			})
+
+			// TLS Certificates routes
+			mux.Route("/tls-certificates", func(mux chi.Router) {
+				mux.Get("/", utils.MakeTemplHandler(hnd.ListTLSCertificates))
+				mux.Post("/tags", utils.MakeTemplHandler(hnd.AddTLSCertificateTag))
+				mux.Delete("/tags", utils.MakeTemplHandler(hnd.RemoveTLSCertificateTag))
+				mux.Get("/{name}", utils.MakeTemplHandler(hnd.GetTLSCertificate))
+				mux.Post("/", utils.MakeTemplHandler(hnd.CreateTLSCertificate))
+				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateTLSCertificate))
+				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteTLSCertificate))
 			})
 		})
 	})

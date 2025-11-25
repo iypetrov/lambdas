@@ -46,7 +46,7 @@ templ TLSCertificatesPage(env string) {
 		</div>
 		<div 
             id="tls-certificates-table" 
-            x-bind:hx-get={ fmt.Sprintf("'/%s/api/v0/secrets?type=tls&cluster=' + (selectedCluster || '')", env) } 
+            x-bind:hx-get={ fmt.Sprintf("'/%s/api/v0/tls-certificates?cluster=' + (selectedCluster || '')", env) } 
             hx-trigger="load, refresh from:body" 
             hx-swap="innerHTML" 
             hx-target="this"

@@ -53,7 +53,7 @@ templ TLSCertificatesTable(secrets []secrets.Secret, env string) {
 										Variant: button.VariantDestructive,
 										Size: button.SizeSm,
 										Attributes: templ.Attributes{
-											"hx-delete": fmt.Sprintf("/%s/api/v0/secrets?name=%s", env, url.QueryEscape(secret.Name)),
+											"hx-delete": fmt.Sprintf("/%s/api/v0/tls-certificates?name=%s", env, url.QueryEscape(secret.Name)),
 											"hx-confirm": "Are you sure you want to delete this certificate?",
 											"hx-target": "#tls-certificates-table",
 											"hx-swap": "innerHTML",
