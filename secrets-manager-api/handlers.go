@@ -59,7 +59,7 @@ func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) 
 		return utils.Render(w, r, components.EmptyStatistics())
 	}
 
-	return utils.Render(w, r, views.StatisticsView(stats))
+	return utils.Render(w, r, views.StatisticsView(stats, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) error {

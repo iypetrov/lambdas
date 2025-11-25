@@ -5,19 +5,25 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 )
 
-templ StatisticsView(stats *secrets.Statistics) {
+templ StatisticsView(stats *secrets.Statistics, env string) {
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-		<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+		<a 
+			href={ fmt.Sprintf("/%s/p/static-secrets", env) }
+			class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition cursor-pointer block"
+		>
 			<h3 class="font-semibold text-lg mb-2 text-gray-700">Static Secrets</h3>
 			<p class="text-3xl font-bold text-gray-900">{ fmt.Sprintf("%d", stats.StaticSecretsCount) }</p>
 			<p class="text-sm text-gray-500 mt-2">Total static secrets</p>
-		</div>
+		</a>
 
-		<div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition">
+		<a 
+			href={ fmt.Sprintf("/%s/p/tls-certificates", env) }
+			class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg p-6 transition cursor-pointer block"
+		>
 			<h3 class="font-semibold text-lg mb-2 text-gray-700">TLS Certificates</h3>
 			<p class="text-3xl font-bold text-gray-900">{ fmt.Sprintf("%d", stats.TLSCertificatesCount) }</p>
 			<p class="text-sm text-gray-500 mt-2">Total TLS certificates</p>
-		</div>
+		</a>
 	</div>
 }
 
