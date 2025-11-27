@@ -7,7 +7,6 @@ const (
 	SecretTypeTLSCertificate SecretType = "TLS Certificate"
 )
 
-// Protected tag keys that cannot be modified or deleted
 const (
 	ProtectedTagCategory   = "Category"
 	ProtectedTagCluster    = "Cluster"
@@ -15,7 +14,6 @@ const (
 	ProtectedTagManagedBy  = "ManagedBy"
 )
 
-// ProtectedTags is a set of protected tag keys
 var ProtectedTags = map[string]bool{
 	ProtectedTagCategory:  true,
 	ProtectedTagCluster:   true,
@@ -23,21 +21,17 @@ var ProtectedTags = map[string]bool{
 	ProtectedTagManagedBy: true,
 }
 
-// IsProtectedTag checks if a tag key is protected
 func IsProtectedTag(tagKey string) bool {
 	return ProtectedTags[tagKey]
 }
 
-// TagMap is an ordered map of tags (key-value pairs)
 type TagMap []TagPair
 
-// TagPair represents a single tag key-value pair
 type TagPair struct {
 	Key   string
 	Value string
 }
 
-// ToMap converts TagMap to a regular map for backward compatibility
 func (tm TagMap) ToMap() map[string]string {
 	result := make(map[string]string, len(tm))
 	for _, pair := range tm {
@@ -125,9 +119,7 @@ type UpdateTagsResponse struct {
 	ARN  string `json:"arn"`
 }
 
-// TLSCertificateData represents the structure for TLS certificate data stored as JSON
 type TLSCertificateData struct {
 	Crt string `json:"crt"`
 	Key string `json:"key"`
 }
-

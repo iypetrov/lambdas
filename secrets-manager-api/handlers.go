@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"sync"
 	"net/http"
 	"strings"
 
@@ -24,6 +25,10 @@ type RouterHandler struct {
 	log            logger.Logger
 	secretsService *secrets.Service
 	clusterService *clusters.Service
+
+	createTLSCertificateMu sync.Mutex
+	updateTLSCertificateMu sync.Mutex
+	deleteTLSCertificateMu sync.Mutex
 }
 
 func (hnd *RouterHandler) StaticFiles() http.Handler {

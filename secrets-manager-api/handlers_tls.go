@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"strings"
 
 	"github.com/cenkalti/backoff/v5"
 	"github.com/go-chi/chi/v5"
@@ -18,183 +19,111 @@ import (
 
 func (hnd *RouterHandler) TLSCertificateDetailView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	encodedName := chi.URLParam(r, "name")
-	if encodedName == "" {
-		http.Error(w, "Certificate name is required", http.StatusBadRequest)
-		return
-	}
 
-	// Base64 decode the secret name
-	decoded, err := base64.URLEncoding.DecodeString(encodedName)
+	secretName, err := utils.Base64Decode(chi.URLParam(r, "name"))
 	if err != nil {
 		http.Error(w, "Invalid certificate name encoding", http.StatusBadRequest)
 		return
 	}
-	secretName := string(decoded)
 
 	details, err := hnd.secretsService.GetSecretDetails(ctx, secretName)
 	if err != nil {
 		hnd.log.Error("Failed to get certificate details: %v", err)
-		http.Error(w, "Failed to retrieve certificate details", http.StatusInternalServerError)
+		status.AddToast(w, status.ErrorInternalServerError(err))
 		return
 	}
 
-	// Don't fetch certificate value for security - it won't be displayed or pre-filled
 	utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
-}
-
-func (hnd *RouterHandler) GetTLSCertificate(w http.ResponseWriter, r *http.Request) error {
-	ctx := r.Context()
-	encodedName := chi.URLParam(r, "name")
-	if encodedName == "" {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("certificate name is required")))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-
-	// Base64 decode the secret name
-	decoded, err := base64.URLEncoding.DecodeString(encodedName)
-	if err != nil {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("invalid certificate name encoding")))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-	secretName := string(decoded)
-
-	resp, err := hnd.secretsService.GetSecret(ctx, secretName)
-	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-
-	// Parse TLS certificate data (supports both JSON and legacy format)
-	tlsData, err := secrets.UnmarshalTLSCertificateData(resp.Value)
-	if err != nil {
-		// If parsing fails, display raw value
-		return utils.Render(w, r, components.SecretValueModal(resp.Value, secretName))
-	}
-
-	// Format as JSON for display
-	formattedValue := fmt.Sprintf(`{
-  "crt": %q,
-  "key": %q
-}`, tlsData.Crt, tlsData.Key)
-
-	return utils.Render(w, r, components.SecretValueModal(formattedValue, secretName))
 }
 
 func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	cluster := r.URL.Query().Get("cluster")
 
-	secretsList, err := hnd.secretsService.ListSecrets(ctx, secrets.SecretTypeTLSCertificate, cluster)
+	secretsList, err := hnd.secretsService.ListSecrets(
+		ctx, 
+		secrets.SecretTypeTLSCertificate, 
+		r.URL.Query().Get("cluster"),
+	)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Request) error {
+	hnd.createTLSCertificateMu.Lock()
+	defer hnd.createTLSCertificateMu.Unlock()
+
 	ctx := r.Context()
 	var req secrets.CreateSecretRequest
 
-	if err := r.ParseForm(); err != nil {
+	err := r.ParseForm()
+	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+	}
+
+	if r.FormValue("cluster") == "" {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+	}
+
+	if r.FormValue("crt") == "" || r.FormValue("key") == "" {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
 	req.Name = r.FormValue("name")
 	req.Cluster = r.FormValue("cluster")
 	req.Type = secrets.SecretTypeTLSCertificate
-
-	// For TLS certificates, combine crt and key fields as JSON
-	crt := r.FormValue("crt")
-	key := r.FormValue("key")
-	if crt == "" || key == "" {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
-		return utils.Render(w, r, components.EmptySecretsTable())
+	req.AdditionalTags = map[string]string{
+		"ExpiresAt": time.Now().UTC().Format(time.DateOnly),
 	}
-	// Marshal certificate and key as JSON
-	jsonValue, err := secrets.MarshalTLSCertificateData(crt, key)
+
+	data := secrets.TLSCertificateData{
+		Crt: strings.TrimSpace(r.FormValue("crt")),
+		Key: strings.TrimSpace(r.FormValue("key")),
+	}
+	jsonData, err := utils.JsonMarshal(data)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("failed to encode TLS certificate data: %v", err)))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
-	req.Value = jsonValue
-
-	if req.Cluster == "" {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
-		return utils.Render(w, r, components.EmptySecretsTable())
-	}
+	req.Value = jsonData 
 
 	resp, err := hnd.secretsService.CreateSecret(ctx, req)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	// Wait for secret to be available and then for it to appear in the list
-	backoffConfig := backoff.NewExponentialBackOff()
-	backoffConfig.InitialInterval = 1 * time.Second
-	backoffConfig.MaxInterval = 5 * time.Second
-	backoffConfig.Reset()
-
-	// First, wait for GetSecret to succeed (secret is available)
-	retryableOperationGetSecret := func() (struct{}, error) {
-		_, err := hnd.secretsService.GetSecret(ctx, resp.Name)
+	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err == nil {
-			return struct{}{}, nil
+			return res, nil
 		}
-		// If it's a "not found" error, retry (secret not yet synced)
-		if contains(err.Error(), "not found") {
-			return struct{}{}, err
-		}
-		// For other errors, stop retrying
-		return struct{}{}, backoff.Permanent(err)
-	}
+		return res, backoff.Permanent(err)
+	})
 
-	_, err = backoff.Retry(ctx, retryableOperationGetSecret, backoff.WithBackOff(backoffConfig))
+	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
 	if err != nil {
-		hnd.log.Warn("Certificate created but not yet available after retries: %v", err)
-	}
-
-	// Now wait for the secret to appear in the list (tags need to sync)
-	backoffConfig.Reset()
-	retryableOperationListSecrets := func() ([]secrets.Secret, error) {
-		secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
-		if err != nil {
-			return nil, backoff.Permanent(err)
-		}
-		// Check if the newly created secret is in the list
-		for _, secret := range secretsList {
-			if secret.Name == resp.Name {
-				return secretsList, nil
-			}
-		}
-		// Secret not in list yet, retry
-		return nil, fmt.Errorf("certificate not yet in list")
-	}
-
-	secretsList, err := backoff.Retry(ctx, retryableOperationListSecrets, backoff.WithBackOff(backoffConfig))
-	if err != nil {
-		hnd.log.Warn("Certificate created but not yet in list after retries: %v", err)
-		// Fallback: get the list anyway (might be stale)
-		secretsList, err = hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
-		if err != nil {
-			status.AddToast(w, status.ErrorInternalServerError(err))
-			return utils.Render(w, r, components.EmptySecretsTable())
-		}
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Certificate '%s' created successfully", resp.Name),
 		StatusCode: http.StatusCreated,
 	})
-
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Request) error {
+	hnd.updateTLSCertificateMu.Lock()
+	defer hnd.updateTLSCertificateMu.Unlock()
+
 	ctx := r.Context()
 
 	if err := r.ParseForm(); err != nil {
@@ -203,16 +132,17 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 	}
 
 	secretName := r.FormValue("name")
-	crt := r.FormValue("crt")
-	key := r.FormValue("key")
 
-	// For TLS certificates, both crt and key are required
-	if crt == "" || key == "" {
+	if r.FormValue("crt") == "" || r.FormValue("key") == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return nil
 	}
-	// Marshal certificate and key as JSON
-	value, err := secrets.MarshalTLSCertificateData(crt, key)
+
+	data := secrets.TLSCertificateData{
+		Crt: strings.TrimSpace(r.FormValue("crt")),
+		Key: strings.TrimSpace(r.FormValue("key")),
+	}
+	jsonData, err := utils.JsonMarshal(data)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("failed to encode TLS certificate data: %v", err)))
 		return nil
@@ -220,124 +150,78 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 
 	req := secrets.UpdateSecretRequest{
 		Name:  secretName,
-		Value: value,
+		Value: jsonData,
 	}
-
 	resp, err := hnd.secretsService.UpdateSecret(ctx, req)
 	if err != nil {
-		if contains(err.Error(), "not found") {
-			status.AddToast(w, status.ErrorNotFound(err))
-			return nil
-		}
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return nil
 	}
 
-	// Get updated details to render the page
-	details, err := hnd.secretsService.GetSecretDetails(ctx, secretName)
+	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
+		if err == nil {
+			return res, nil
+		}
+		if res.Value == jsonData {
+			return res, nil
+		}
+		return res, backoff.Permanent(err)
+	})
+
+	details, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
 	if err != nil {
-		hnd.log.Error("Failed to get certificate details after update: %v", err)
-		status.AddToast(w, status.Toast{
-			Message:    fmt.Sprintf("Certificate '%s' updated successfully", resp.Name),
-			StatusCode: http.StatusOK,
-		})
-		// Still redirect even if we can't get details
-		encodedName := base64.URLEncoding.EncodeToString([]byte(secretName))
-		redirectPath := fmt.Sprintf("/%s/p/tls-certificates/%s", hnd.config.App.Env, encodedName)
-		utils.HxRedirect(w, redirectPath)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte{})
+		status.AddToast(w, status.ErrorInternalServerError(err))
 		return nil
 	}
 
-	// Add toast and render the page - the HX-Trigger header should work with HTMX
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Certificate '%s' updated successfully", resp.Name),
 		StatusCode: http.StatusOK,
 	})
-
 	return utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Request) error {
+	hnd.deleteTLSCertificateMu.Lock()
+	defer hnd.deleteTLSCertificateMu.Unlock()
+
 	ctx := r.Context()
-	secretName := r.URL.Query().Get("name")
-	if secretName == "" {
+	if r.URL.Query().Get("name") == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("certificate name is required")))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	cluster, secretType, err := parseSecretName(secretName)
-	if err != nil {
-		cluster = r.URL.Query().Get("cluster")
-		secretType = secrets.SecretTypeTLSCertificate
-	}
-
-	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
+	resp, err := hnd.secretsService.DeleteSecret(ctx, r.URL.Query().Get("name"))
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	// Wait for secret to be deleted and then for it to disappear from the list
-	backoffConfig := backoff.NewExponentialBackOff()
-	backoffConfig.InitialInterval = 500 * time.Millisecond
-	backoffConfig.MaxInterval = 5 * time.Second
-	backoffConfig.Reset()
-
-	// First, wait for GetSecret to fail (secret is deleted)
-	retryableOperationGetSecret := func() (struct{}, error) {
-		_, err := hnd.secretsService.GetSecret(ctx, secretName)
-		if err != nil {
-			// Secret is deleted if it's not found or marked for deletion
-			if contains(err.Error(), "not found") || contains(err.Error(), "marked for deletion") {
-				return struct{}{}, nil
-			}
-			return struct{}{}, backoff.Permanent(err)
+	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
+		if err == nil {
+			return res, nil
 		}
-		// Secret still exists, retry
-		return struct{}{}, fmt.Errorf("certificate still exists")
-	}
+		return res, backoff.Permanent(err)
+	})
 
-	_, err = backoff.Retry(ctx, retryableOperationGetSecret, backoff.WithBackOff(backoffConfig))
+	cluster, secretType, err := parseSecretName(r.URL.Query().Get("name"))
 	if err != nil {
-		hnd.log.Warn("Certificate deleted but still accessible after retries: %v", err)
+		status.AddToast(w, status.ErrorBadRequest(err))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	// Now wait for the secret to disappear from the list
-	backoffConfig.Reset()
-	retryableOperationListSecrets := func() ([]secrets.Secret, error) {
-		secretsList, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
-		if err != nil {
-			return nil, backoff.Permanent(err)
-		}
-		// Check if the deleted secret is still in the list
-		for _, secret := range secretsList {
-			if secret.Name == secretName {
-				// Secret still in list, retry
-				return nil, fmt.Errorf("certificate still in list")
-			}
-		}
-		// Secret not in list anymore, success
-		return secretsList, nil
-	}
-
-	secretsList, err := backoff.Retry(ctx, retryableOperationListSecrets, backoff.WithBackOff(backoffConfig))
+	secretsList, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
 	if err != nil {
-		hnd.log.Warn("Certificate deleted but still in list after retries: %v", err)
-		// Fallback: get the list anyway (might be stale)
-		secretsList, err = hnd.secretsService.ListSecrets(ctx, secretType, cluster)
-		if err != nil {
-			status.AddToast(w, status.ErrorInternalServerError(err))
-			return utils.Render(w, r, components.EmptySecretsTable())
-		}
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Certificate '%s' deleted successfully", resp.Name),
 		StatusCode: http.StatusOK,
 	})
-
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
 }
 
@@ -360,7 +244,6 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
-	// Prevent adding/overwriting protected tags
 	if secrets.IsProtectedTag(req.Key) {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot modify protected tag '%s'", req.Key)))
 		return nil
@@ -376,14 +259,6 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 		Message:    fmt.Sprintf("Tag '%s' added successfully", req.Key),
 		StatusCode: http.StatusOK,
 	})
-
-	// Determine redirect URL
-	encodedName := base64.URLEncoding.EncodeToString([]byte(req.Name))
-	redirectPath := fmt.Sprintf("/%s/p/tls-certificates/%s", hnd.config.App.Env, encodedName)
-
-	utils.HxRedirect(w, redirectPath)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
 	return nil
 }
 
@@ -398,7 +273,6 @@ func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http
 		return nil
 	}
 
-	// Prevent deletion of protected tags
 	if secrets.IsProtectedTag(tagKey) {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot delete protected tag '%s'", tagKey)))
 		return nil
@@ -419,14 +293,5 @@ func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http
 		Message:    fmt.Sprintf("Tag '%s' removed successfully", tagKey),
 		StatusCode: http.StatusOK,
 	})
-
-	// Determine redirect URL
-	encodedName := base64.URLEncoding.EncodeToString([]byte(secretName))
-	redirectPath := fmt.Sprintf("/%s/p/tls-certificates/%s", hnd.config.App.Env, encodedName)
-
-	utils.HxRedirect(w, redirectPath)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
 	return nil
 }
-

@@ -43,31 +43,6 @@ func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.
 	utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
 }
 
-func (hnd *RouterHandler) GetStaticSecret(w http.ResponseWriter, r *http.Request) error {
-	ctx := r.Context()
-	encodedName := chi.URLParam(r, "name")
-	if encodedName == "" {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("secret name is required")))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-
-	// Base64 decode the secret name
-	decoded, err := base64.URLEncoding.DecodeString(encodedName)
-	if err != nil {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("invalid secret name encoding")))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-	secretName := string(decoded)
-
-	resp, err := hnd.secretsService.GetSecret(ctx, secretName)
-	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyModal())
-	}
-
-	return utils.Render(w, r, components.SecretValueModal(resp.Value, secretName))
-}
-
 func (hnd *RouterHandler) ListStaticSecrets(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	cluster := r.URL.Query().Get("cluster")
@@ -75,7 +50,7 @@ func (hnd *RouterHandler) ListStaticSecrets(w http.ResponseWriter, r *http.Reque
 	secretsList, err := hnd.secretsService.ListSecrets(ctx, secrets.SecretTypeStaticSecret, cluster)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env)))
@@ -87,7 +62,7 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 
 	if err := r.ParseForm(); err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	req.Name = r.FormValue("name")
@@ -97,18 +72,18 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 
 	if req.Cluster == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	if req.Value == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("value is required")))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	resp, err := hnd.secretsService.CreateSecret(ctx, req)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	// Wait for secret to be available and then for it to appear in the list
@@ -160,7 +135,7 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 		secretsList, err = hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
 		if err != nil {
 			status.AddToast(w, status.ErrorInternalServerError(err))
-			return utils.Render(w, r, components.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptyStaticSecretsTable())
 		}
 	}
 
@@ -234,7 +209,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 	secretName := r.URL.Query().Get("name")
 	if secretName == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("secret name is required")))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	cluster, secretType, err := parseSecretName(secretName)
@@ -246,7 +221,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptySecretsTable())
+		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
 	// Wait for secret to be deleted and then for it to disappear from the list
@@ -299,7 +274,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		secretsList, err = hnd.secretsService.ListSecrets(ctx, secretType, cluster)
 		if err != nil {
 			status.AddToast(w, status.ErrorInternalServerError(err))
-			return utils.Render(w, r, components.EmptySecretsTable())
+			return utils.Render(w, r, components.EmptyStaticSecretsTable())
 		}
 	}
 
