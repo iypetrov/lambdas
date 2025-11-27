@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
@@ -38,11 +37,12 @@ func (hnd *RouterHandler) TLSCertificateDetailView(w http.ResponseWriter, r *htt
 
 func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
+	cluster := r.URL.Query().Get("cluster")
 
 	secretsList, err := hnd.secretsService.ListSecrets(
-		ctx, 
-		secrets.SecretTypeTLSCertificate, 
-		r.URL.Query().Get("cluster"),
+		ctx,
+		secrets.SecretTypeTLSCertificate,
+		cluster,
 	)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
@@ -65,33 +65,38 @@ func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	if r.FormValue("cluster") == "" {
+	name := r.FormValue("name")
+	cluster := r.FormValue("cluster")
+	crt := r.FormValue("crt")
+	key := r.FormValue("key")
+
+	if cluster == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	if r.FormValue("crt") == "" || r.FormValue("key") == "" {
+	if crt == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	req.Name = r.FormValue("name")
-	req.Cluster = r.FormValue("cluster")
+	req.Name = name
+	req.Cluster = cluster
 	req.Type = secrets.SecretTypeTLSCertificate
 	req.AdditionalTags = map[string]string{
 		"ExpiresAt": time.Now().UTC().Format(time.DateOnly),
 	}
 
 	data := secrets.TLSCertificateData{
-		Crt: strings.TrimSpace(r.FormValue("crt")),
-		Key: strings.TrimSpace(r.FormValue("key")),
+		Crt: strings.TrimSpace(crt),
+		Key: strings.TrimSpace(key),
 	}
 	jsonData, err := utils.JsonMarshal(data)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("failed to encode TLS certificate data: %v", err)))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
-	req.Value = jsonData 
+	req.Value = jsonData
 
 	resp, err := hnd.secretsService.CreateSecret(ctx, req)
 	if err != nil {
@@ -106,6 +111,9 @@ func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Re
 		}
 		return res, backoff.Permanent(err)
 	})
+	if err != nil {
+		hnd.log.Warn("Certificate created but not yet available after retries: %v", err)
+	}
 
 	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
 	if err != nil {
@@ -132,15 +140,17 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 	}
 
 	secretName := r.FormValue("name")
+	crt := r.FormValue("crt")
+	key := r.FormValue("key")
 
-	if r.FormValue("crt") == "" || r.FormValue("key") == "" {
+	if crt == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return nil
 	}
 
 	data := secrets.TLSCertificateData{
-		Crt: strings.TrimSpace(r.FormValue("crt")),
-		Key: strings.TrimSpace(r.FormValue("key")),
+		Crt: strings.TrimSpace(crt),
+		Key: strings.TrimSpace(key),
 	}
 	jsonData, err := utils.JsonMarshal(data)
 	if err != nil {
@@ -161,10 +171,10 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err == nil {
-			return res, nil
-		}
-		if res.Value == jsonData {
-			return res, nil
+			if res.Value == jsonData {
+				return res, nil
+			}
+			return res, fmt.Errorf("certificate value not yet updated")
 		}
 		return res, backoff.Permanent(err)
 	})
@@ -187,12 +197,14 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 	defer hnd.deleteTLSCertificateMu.Unlock()
 
 	ctx := r.Context()
-	if r.URL.Query().Get("name") == "" {
+	secretName := r.URL.Query().Get("name")
+
+	if secretName == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("certificate name is required")))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	resp, err := hnd.secretsService.DeleteSecret(ctx, r.URL.Query().Get("name"))
+	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
@@ -200,13 +212,13 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 
 	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err == nil {
-			return res, nil
+		if err != nil {
+			return res, backoff.Permanent(err)
 		}
-		return res, backoff.Permanent(err)
+		return res, fmt.Errorf("secret still exists")
 	})
 
-	cluster, secretType, err := parseSecretName(r.URL.Query().Get("name"))
+	cluster, secretType, err := parseSecretName(secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
@@ -233,10 +245,14 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
+	name := r.FormValue("name")
+	key := r.FormValue("key")
+	value := r.FormValue("value")
+
 	req := secrets.AddTagRequest{
-		Name:  r.FormValue("name"),
-		Key:   r.FormValue("key"),
-		Value: r.FormValue("value"),
+		Name:  name,
+		Key:   key,
+		Value: value,
 	}
 
 	if req.Name == "" || req.Key == "" || req.Value == "" {
@@ -256,7 +272,7 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 	}
 
 	status.AddToast(w, status.Toast{
-		Message:    fmt.Sprintf("Tag '%s' added successfully", req.Key),
+		Message:    fmt.Sprintf("Tag '%s' added successfully", key),
 		StatusCode: http.StatusOK,
 	})
 	return nil
@@ -265,22 +281,22 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 
-	secretName := r.URL.Query().Get("name")
-	tagKey := r.URL.Query().Get("key")
+	name := r.URL.Query().Get("name")
+	key := r.URL.Query().Get("key")
 
-	if secretName == "" || tagKey == "" {
+	if name == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("name and key are required")))
 		return nil
 	}
 
-	if secrets.IsProtectedTag(tagKey) {
-		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot delete protected tag '%s'", tagKey)))
+	if secrets.IsProtectedTag(key) {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cannot delete protected tag '%s'", key)))
 		return nil
 	}
 
 	req := secrets.RemoveTagRequest{
-		Name: secretName,
-		Key:  tagKey,
+		Name: name,
+		Key:  key,
 	}
 
 	_, err := hnd.secretsService.RemoveTag(ctx, req)
@@ -290,7 +306,7 @@ func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http
 	}
 
 	status.AddToast(w, status.Toast{
-		Message:    fmt.Sprintf("Tag '%s' removed successfully", tagKey),
+		Message:    fmt.Sprintf("Tag '%s' removed successfully", key),
 		StatusCode: http.StatusOK,
 	})
 	return nil
