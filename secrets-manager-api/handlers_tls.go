@@ -52,9 +52,9 @@ func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Req
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
 }
 
-func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Request) error {
-	hnd.createTLSCertificateMu.Lock()
-	defer hnd.createTLSCertificateMu.Unlock()
+func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Request) error {
+	hnd.importTLSCertificateMu.Lock()
+	defer hnd.importTLSCertificateMu.Unlock()
 
 	ctx := r.Context()
 	var req secrets.CreateSecretRequest
@@ -112,7 +112,7 @@ func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Re
 		return res, backoff.Permanent(err)
 	})
 	if err != nil {
-		hnd.log.Warn("Certificate created but not yet available after retries: %v", err)
+		hnd.log.Warn("Certificate imported but not yet available after retries: %v", err)
 	}
 
 	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
@@ -122,7 +122,7 @@ func (hnd *RouterHandler) CreateTLSCertificate(w http.ResponseWriter, r *http.Re
 	}
 
 	status.AddToast(w, status.Toast{
-		Message:    fmt.Sprintf("Certificate '%s' created successfully", resp.Name),
+		Message:    fmt.Sprintf("Certificate '%s' imported successfully", resp.Name),
 		StatusCode: http.StatusCreated,
 	})
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))

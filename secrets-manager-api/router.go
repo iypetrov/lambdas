@@ -41,7 +41,7 @@ func NewRouter(hnd RouterHandler) *chi.Mux {
 			mux.Route("/tls-certificates", func(mux chi.Router) {
 				mux.Get("/", utils.MakeTemplHandler(hnd.ListTLSCertificates))
 				mux.Post("/tags", utils.MakeTemplHandler(hnd.AddTLSCertificateTag))
-				mux.Post("/", utils.MakeTemplHandler(hnd.CreateTLSCertificate))
+				mux.Post("/", utils.MakeTemplHandler(hnd.ImportTLSCertificate))
 				mux.Put("/", utils.MakeTemplHandler(hnd.UpdateTLSCertificate))
 				mux.Delete("/", utils.MakeTemplHandler(hnd.DeleteTLSCertificate))
 				mux.Delete("/tags", utils.MakeTemplHandler(hnd.RemoveTLSCertificateTag))

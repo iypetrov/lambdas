@@ -30,7 +30,7 @@ type RouterHandler struct {
 	updateStaticSecretMu sync.Mutex
 	deleteStaticSecretMu sync.Mutex
 
-	createTLSCertificateMu sync.Mutex
+	importTLSCertificateMu sync.Mutex
 	updateTLSCertificateMu sync.Mutex
 	deleteTLSCertificateMu sync.Mutex
 }

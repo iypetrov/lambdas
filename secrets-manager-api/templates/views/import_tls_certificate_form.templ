@@ -9,7 +9,7 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/textarea"
 )
 
-templ CreateTLSCertificateForm(env string) {
+templ ImportTLSCertificateForm(env string) {
 	@form.Item() {
 		@form.Label(form.LabelProps{For: "cluster"}) {
 			Cluster Name
@@ -133,7 +133,7 @@ templ CreateTLSCertificateForm(env string) {
 			Type: button.TypeButton,
 			Variant: button.VariantOutline,
 			Attributes: templ.Attributes{
-				"x-on:click": "showCreateTLSModal = false",
+				"x-on:click": "showImportTLSModal = false",
 			},
 		}) {
 			<span>Cancel</span>
@@ -142,10 +142,10 @@ templ CreateTLSCertificateForm(env string) {
 			Type: button.TypeSubmit,
 			Variant: button.VariantDefault,
 			Attributes: templ.Attributes{
-				"x-on:click": "showCreateTLSModal = false",
+				"x-on:click": "showImportTLSModal = false",
 			},
 		}) {
-			<span class="button-text">Create</span>
+			<span class="button-text">Import</span>
 			@icon.LoaderCircle(icon.Props{
 				Size: 16,
 				Class: "htmx-indicator animate-spin",

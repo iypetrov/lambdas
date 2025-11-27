@@ -38,10 +38,10 @@ templ TLSCertificatesPage(env string) {
 			@button.Button(button.Props{
 				Variant: button.VariantDefault,
 				Attributes: templ.Attributes{
-					"x-on:click": "showCreateTLSModal = true",
+					"x-on:click": "showImportTLSModal = true",
 				},
 			}) {
-				<span>+ Create Certificate</span>
+				<span>+ Import Certificate</span>
 			}
 		</div>
 		<div 
