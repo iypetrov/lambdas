@@ -26,6 +26,10 @@ type RouterHandler struct {
 	secretsService *secrets.Service
 	clusterService *clusters.Service
 
+	createStaticSecretMu sync.Mutex
+	updateStaticSecretMu sync.Mutex
+	deleteStaticSecretMu sync.Mutex
+
 	createTLSCertificateMu sync.Mutex
 	updateTLSCertificateMu sync.Mutex
 	deleteTLSCertificateMu sync.Mutex
