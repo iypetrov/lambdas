@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -42,6 +42,7 @@ func (hnd *RouterHandler) TLSCertificateDetailView(w http.ResponseWriter, r *htt
 func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	cluster := r.URL.Query().Get("cluster")
+	searchName := r.URL.Query().Get("search-name")
 
 	secretsList, err := hnd.secretsService.ListSecrets(
 		ctx,
@@ -53,7 +54,56 @@ func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Req
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
+	// Collect all unique tag key-value pairs from the unfiltered list for the dropdown
+	allTagPairs := getAllTagPairs(secretsList)
+
+	// Filter by name if provided
+	if searchName != "" {
+		filtered := []secrets.Secret{}
+		searchNameLower := strings.ToLower(searchName)
+		for _, secret := range secretsList {
+			if strings.Contains(strings.ToLower(secret.Name), searchNameLower) {
+				filtered = append(filtered, secret)
+			}
+		}
+		secretsList = filtered
+	}
+
+	// Filter by tag key-value pairs
+	// Parse search-tag-key and search-tag-value parameters
+	searchTagFilters := make(map[string]string)
+	for key, values := range r.URL.Query() {
+		if strings.HasPrefix(key, "search-tag-key[") && strings.HasSuffix(key, "]") {
+			tagKey := strings.TrimPrefix(key, "search-tag-key[")
+			tagKey = strings.TrimSuffix(tagKey, "]")
+			if len(values) > 0 && values[0] != "" {
+				valueKey := "search-tag-value[" + tagKey + "]"
+				if tagValue := r.URL.Query().Get(valueKey); tagValue != "" {
+					searchTagFilters[values[0]] = tagValue
+				}
+			}
+		}
+	}
+
+	// Apply tag filters
+	if len(searchTagFilters) > 0 {
+		filtered := []secrets.Secret{}
+		for _, secret := range secretsList {
+			matched := true
+			for filterKey, filterValue := range searchTagFilters {
+				if secretValue, exists := secret.Tags[filterKey]; !exists || secretValue != filterValue {
+					matched = false
+					break
+				}
+			}
+			if matched {
+				filtered = append(filtered, secret)
+			}
+		}
+		secretsList = filtered
+	}
+
+	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env), searchName, searchTagFilters, allTagPairs))
 }
 
 func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Request) error {
@@ -149,7 +199,8 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		Message:    fmt.Sprintf("Certificate '%s' imported successfully", resp.Name),
 		StatusCode: http.StatusCreated,
 	})
-	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
+	allTagPairs := getAllTagPairs(secretsList)
+	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env), "", make(map[string]string), allTagPairs))
 }
 
 func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Request) error {
@@ -290,7 +341,8 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		Message:    fmt.Sprintf("Certificate '%s' deleted successfully", resp.Name),
 		StatusCode: http.StatusOK,
 	})
-	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env)))
+	allTagPairs := getAllTagPairs(secretsList)
+	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env), "", make(map[string]string), allTagPairs))
 }
 
 func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Request) error {

@@ -33,7 +33,7 @@ templ TLSCertificatesPage(env string) {
 		</div>
 		<div 
             id="tls-certificates-table" 
-            x-data={ fmt.Sprintf("{ env: '%s', loadTable() { const cluster = $store.cluster.selectedCluster || ''; htmx.ajax('GET', '/' + this.env + '/api/v0/tls-certificates?cluster=' + cluster, { target: '#tls-certificates-table', swap: 'innerHTML' }); } }", env) }
+            x-data={ fmt.Sprintf("{ env: '%s', loadTable() { const cluster = $store.cluster.selectedCluster || ''; const searchName = document.getElementById('tls-certificates-search-name')?.value || ''; const searchTags = document.getElementById('tls-certificates-search-tags')?.value || ''; let url = '/' + this.env + '/api/v0/tls-certificates?cluster=' + cluster; if (searchName) url += '&search-name=' + encodeURIComponent(searchName); if (searchTags) url += '&search-tags=' + encodeURIComponent(searchTags); htmx.ajax('GET', url, { target: '#tls-certificates-table', swap: 'innerHTML' }); } }", env) }
             x-init="loadTable(); document.body.addEventListener('refreshTLSCertificatesTable', () => loadTable())"
             x-effect="$watch('$store.cluster.selectedCluster', () => loadTable())"
         >

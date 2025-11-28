@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -32,6 +33,31 @@ func parseAdditionalTags(r *http.Request) map[string]string {
 	return tags
 }
 
+func getAllTagPairs(secretsList []secrets.Secret) []secrets.TagPair {
+	tagPairsMap := make(map[string]bool) // Use "key:value" as key
+	var tagPairs []secrets.TagPair
+	
+	for _, secret := range secretsList {
+		for key, value := range secret.Tags {
+			pairKey := key + ":" + value
+			if !tagPairsMap[pairKey] {
+				tagPairsMap[pairKey] = true
+				tagPairs = append(tagPairs, secrets.TagPair{Key: key, Value: value})
+			}
+		}
+	}
+	
+	// Sort by key, then by value
+	sort.Slice(tagPairs, func(i, j int) bool {
+		if tagPairs[i].Key != tagPairs[j].Key {
+			return tagPairs[i].Key < tagPairs[j].Key
+		}
+		return tagPairs[i].Value < tagPairs[j].Value
+	})
+	
+	return tagPairs
+}
+
 func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -59,6 +85,7 @@ func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.
 func (hnd *RouterHandler) ListStaticSecrets(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	cluster := r.URL.Query().Get("cluster")
+	searchName := r.URL.Query().Get("search-name")
 
 	secretsList, err := hnd.secretsService.ListSecrets(
 		ctx,
@@ -70,7 +97,56 @@ func (hnd *RouterHandler) ListStaticSecrets(w http.ResponseWriter, r *http.Reque
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env)))
+	// Collect all unique tag key-value pairs from the unfiltered list for the dropdown
+	allTagPairs := getAllTagPairs(secretsList)
+
+	// Filter by name if provided
+	if searchName != "" {
+		filtered := []secrets.Secret{}
+		searchNameLower := strings.ToLower(searchName)
+		for _, secret := range secretsList {
+			if strings.Contains(strings.ToLower(secret.Name), searchNameLower) {
+				filtered = append(filtered, secret)
+			}
+		}
+		secretsList = filtered
+	}
+
+	// Filter by tag key-value pairs
+	// Parse search-tag-key and search-tag-value parameters
+	searchTagFilters := make(map[string]string)
+	for key, values := range r.URL.Query() {
+		if strings.HasPrefix(key, "search-tag-key[") && strings.HasSuffix(key, "]") {
+			tagKey := strings.TrimPrefix(key, "search-tag-key[")
+			tagKey = strings.TrimSuffix(tagKey, "]")
+			if len(values) > 0 && values[0] != "" {
+				valueKey := "search-tag-value[" + tagKey + "]"
+				if tagValue := r.URL.Query().Get(valueKey); tagValue != "" {
+					searchTagFilters[values[0]] = tagValue
+				}
+			}
+		}
+	}
+
+	// Apply tag filters
+	if len(searchTagFilters) > 0 {
+		filtered := []secrets.Secret{}
+		for _, secret := range secretsList {
+			matched := true
+			for filterKey, filterValue := range searchTagFilters {
+				if secretValue, exists := secret.Tags[filterKey]; !exists || secretValue != filterValue {
+					matched = false
+					break
+				}
+			}
+			if matched {
+				filtered = append(filtered, secret)
+			}
+		}
+		secretsList = filtered
+	}
+
+	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env), searchName, searchTagFilters, allTagPairs))
 }
 
 func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Request) error {
@@ -152,7 +228,8 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 		Message:    fmt.Sprintf("Secret '%s' created successfully", resp.Name),
 		StatusCode: http.StatusCreated,
 	})
-	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env)))
+	allTagPairs := getAllTagPairs(secretsList)
+	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env), "", make(map[string]string), allTagPairs))
 }
 
 func (hnd *RouterHandler) UpdateStaticSecret(w http.ResponseWriter, r *http.Request) error {
@@ -283,7 +360,8 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		Message:    fmt.Sprintf("Secret '%s' deleted successfully", resp.Name),
 		StatusCode: http.StatusOK,
 	})
-	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env)))
+	allTagPairs := getAllTagPairs(secretsList)
+	return utils.Render(w, r, components.StaticSecretsTable(secretsList, string(hnd.config.App.Env), "", make(map[string]string), allTagPairs))
 }
 
 func (hnd *RouterHandler) AddStaticSecretTag(w http.ResponseWriter, r *http.Request) error {
