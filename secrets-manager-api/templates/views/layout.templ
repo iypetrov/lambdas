@@ -77,7 +77,8 @@ templ Layout(props LayoutProps) {
 							hx-post={ fmt.Sprintf("/%s/api/v0/static-secrets", props.Env) }
 							hx-target="#static-secrets-table"
 							hx-swap="innerHTML"
-							@htmx:after-request="showCreateStaticModal = false; htmx.trigger('body', 'refreshStaticSecretsTable')"
+							@htmx:after-swap="Alpine.initTree(document.getElementById('static-secrets-table'))"
+							@htmx:after-request="showCreateStaticModal = false"
 						>
 							@CreateStaticSecretForm(props.Env)
 						</form>
@@ -116,7 +117,8 @@ templ Layout(props LayoutProps) {
 							hx-post={ fmt.Sprintf("/%s/api/v0/tls-certificates", props.Env) }
 							hx-target="#tls-certificates-table"
 							hx-swap="innerHTML"
-							@htmx:after-request="showImportTLSModal = false; htmx.trigger('body', 'refreshTLSCertificatesTable')"
+							@htmx:after-swap="Alpine.initTree(document.getElementById('tls-certificates-table'))"
+							@htmx:after-request="showImportTLSModal = false"
 						>
 							@ImportTLSCertificateForm(props.Env)
 						</form>
