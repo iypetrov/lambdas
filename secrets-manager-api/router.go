@@ -11,7 +11,7 @@ import (
 func NewRouter(hnd *RouterHandler) *chi.Mux {
 	mux := chi.NewRouter()
 
-	mux.Handle("/static/*", hnd.StaticFiles())
+	mux.Handle(fmt.Sprintf("/%s/static/*", hnd.config.App.Env), hnd.StaticFiles())
 
 	mux.With().Route(fmt.Sprintf("/%s/p", hnd.config.App.Env), func(mux chi.Router) {
 		mux.Get("/home", hnd.HomeView)

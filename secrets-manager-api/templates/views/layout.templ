@@ -12,7 +12,7 @@ type LayoutProps struct {
 }
 
 templ Layout(props LayoutProps) {
-	@templates.Base() {
+	@templates.Base(props.Env) {
 		<div class="flex min-h-screen w-full" x-data="{ showCreateStaticModal: false, showImportTLSModal: false, showValueModal: false }">
 			<aside class="w-64 bg-gray-900 min-h-screen flex flex-col">
 				<div class="w-full p-6 flex flex-col items-center justify-center border-b border-gray-800">

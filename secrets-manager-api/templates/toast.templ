@@ -1,11 +1,13 @@
 package templates
 
 import (
+    "fmt"
+
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/icon"
 )
 
-templ Toast() {
-	<script src="/static/js/toast.js"></script>
+templ Toast(env string) {
+	<script src={ fmt.Sprintf("/%s/static/js/toast.js", env) }></script>
 	<div x-data="toast" x-init="globalInit($el)">
 		<template x-teleport="body">
 			<div
