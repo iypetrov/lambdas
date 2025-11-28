@@ -32,7 +32,12 @@ func (hnd *RouterHandler) TLSCertificateDetailView(w http.ResponseWriter, r *htt
 		return
 	}
 
-	utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
+	err = utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
+	if err != nil {
+		hnd.log.Error("Failed to render TLS certificate detail page: %v", err)
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return
+	}
 }
 
 func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Request) error {
@@ -168,7 +173,7 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err == nil {
 			if res.Value == jsonData {
@@ -210,13 +215,16 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err != nil {
 			return res, backoff.Permanent(err)
 		}
 		return res, fmt.Errorf("secret still exists")
 	})
+	if retryErr != nil {
+		hnd.log.Warn("Certificate deleted but still exists after retries: %v", retryErr)
+	}
 
 	cluster, secretType, err := parseSecretName(secretName)
 	if err != nil {

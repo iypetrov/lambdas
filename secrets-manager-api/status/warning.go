@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	WarnNotNumbericID = fmt.Errorf("id should be a number")
+	ErrWarnNotNumbericID = fmt.Errorf("id should be a number")
 )
 
 func WarningStatusBadRequest(err error) Toast {

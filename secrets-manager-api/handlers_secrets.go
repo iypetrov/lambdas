@@ -30,7 +30,12 @@ func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.
 		return
 	}
 
-	utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
+	err = utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
+	if err != nil {
+		hnd.log.Error("Failed to render static secret detail page: %v", err)
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return
+	}
 }
 
 func (hnd *RouterHandler) ListStaticSecrets(w http.ResponseWriter, r *http.Request) error {
@@ -88,15 +93,15 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err == nil {
 			return res, nil
 		}
 		return res, backoff.Permanent(err)
 	})
-	if err != nil {
-		hnd.log.Warn("Secret created but not yet available after retries: %v", err)
+	if retryErr != nil {
+		hnd.log.Warn("Secret created but not yet available after retries: %v", retryErr)
 	}
 
 	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
@@ -142,7 +147,7 @@ func (hnd *RouterHandler) UpdateStaticSecret(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err == nil {
 			if res.Value == value {
@@ -184,7 +189,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err != nil {
 			return res, backoff.Permanent(err)

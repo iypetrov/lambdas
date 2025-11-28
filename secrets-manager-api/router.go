@@ -9,7 +9,7 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
 )
 
-func NewRouter(hnd RouterHandler) *chi.Mux {
+func NewRouter(hnd *RouterHandler) *chi.Mux {
 	mux := chi.NewRouter()
 
 	if hnd.config.App.Env == config.Local {

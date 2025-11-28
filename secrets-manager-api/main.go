@@ -26,15 +26,13 @@ func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *ch
 		clusterService: clusterService,
 	}
 
-	return NewRouter(handler)
+	return NewRouter(&handler)
 }
 
 func Handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	log := logger.Get(ctx)
 	cfg := config.Get(ctx)
-	var chiLambda *chiadapter.ChiLambda
-
-	chiLambda = chiadapter.New(configServer(ctx, cfg, log))
+	var chiLambda = chiadapter.New(configServer(ctx, cfg, log))
 	return chiLambda.ProxyWithContext(ctx, event)
 }
 
@@ -45,7 +43,9 @@ func main() {
 
 	log.Info("Starting Secrets Manager API in %s environment", cfg.App.Env)
 	if cfg.App.Env == config.Local {
-		http.ListenAndServe(":8080", configServer(ctx, cfg, log))
+		if err := http.ListenAndServe(":8080", configServer(ctx, cfg, log)); err != nil {
+			log.Error("Failed to start server: %v", err)
+		}
 	} else {
 		ctx = log.Inject(ctx)
 		ctx = config.Inject(ctx, cfg)

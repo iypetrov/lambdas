@@ -11,8 +11,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type contextKey string
+
 var (
-	key = "LOGGER"
+	key contextKey = "LOGGER"
 )
 
 type Logger interface {

@@ -1,11 +1,10 @@
 package main
 
 import (
-	"embed"
 	"fmt"
-	"sync"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
@@ -17,8 +16,6 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
 )
 
-//go:embed static
-var staticFS embed.FS
 
 type RouterHandler struct {
 	config         config.Config
@@ -48,15 +45,21 @@ func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {
 		stats = &secrets.Statistics{}
 	}
 
-	utils.Render(w, r, views.DashboardPage(stats, string(hnd.config.App.Env)))
+	if err := utils.Render(w, r, views.DashboardPage(stats, string(hnd.config.App.Env))); err != nil {
+		hnd.log.Error("Failed to render dashboard page: %v", err)
+	}
 }
 
 func (hnd *RouterHandler) StaticSecretsView(w http.ResponseWriter, r *http.Request) {
-	utils.Render(w, r, views.StaticSecretsPage(string(hnd.config.App.Env)))
+	if err := utils.Render(w, r, views.StaticSecretsPage(string(hnd.config.App.Env))); err != nil {
+		hnd.log.Error("Failed to render static secrets page: %v", err)
+	}
 }
 
 func (hnd *RouterHandler) TLSCertificatesView(w http.ResponseWriter, r *http.Request) {
-	utils.Render(w, r, views.TLSCertificatesPage(string(hnd.config.App.Env)))
+	if err := utils.Render(w, r, views.TLSCertificatesPage(string(hnd.config.App.Env))); err != nil {
+		hnd.log.Error("Failed to render TLS certificates page: %v", err)
+	}
 }
 
 func (hnd *RouterHandler) GetStatistics(w http.ResponseWriter, r *http.Request) error {
@@ -81,11 +84,6 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 	return utils.Render(w, r, components.ClusterOptions(clusters))
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr)))
-}
 
 // parseSecretName extracts cluster and type from a secret name
 // Format: RESTRICTED.<cluster>.<TYPE>.<name>
@@ -100,11 +98,12 @@ func parseSecretName(secretName string) (string, secrets.SecretType, error) {
 	typePart := parts[2]
 
 	var secretType secrets.SecretType
-	if typePart == "STATIC_SECRET" {
+	switch typePart {
+	case "STATIC_SECRET":
 		secretType = secrets.SecretTypeStaticSecret
-	} else if typePart == "TLS_CERTIFICATE" {
+	case "TLS_CERTIFICATE":
 		secretType = secrets.SecretTypeTLSCertificate
-	} else {
+	default:
 		return "", "", fmt.Errorf("unknown secret type: %s", typePart)
 	}
 

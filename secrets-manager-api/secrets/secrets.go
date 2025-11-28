@@ -294,7 +294,7 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 	}
 
 	var versionID string
-	if result.VersionIdsToStages != nil && len(result.VersionIdsToStages) > 0 {
+	if len(result.VersionIdsToStages) > 0 {
 		// Get the AWSCURRENT version ID if available, otherwise get the first one
 		for vID, stages := range result.VersionIdsToStages {
 			for _, stage := range stages {

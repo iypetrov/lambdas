@@ -24,8 +24,10 @@ func (e Environment) IsValid() bool {
 	}
 }
 
+type contextKey string
+
 var (
-	key = "CONFIG"
+	key contextKey = "CONFIG"
 )
 
 type Config struct {
