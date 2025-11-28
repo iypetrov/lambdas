@@ -14,6 +14,24 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/utils"
 )
 
+func parseAdditionalTags(r *http.Request) map[string]string {
+	tags := make(map[string]string)
+	prefix := "additional_tags["
+	
+	for key, values := range r.Form {
+		if strings.HasPrefix(key, prefix) && strings.HasSuffix(key, "]") {
+			tagKey := strings.TrimPrefix(key, prefix)
+			tagKey = strings.TrimSuffix(tagKey, "]")
+			
+			if len(values) > 0 && values[0] != "" {
+				tags[tagKey] = values[0]
+			}
+		}
+	}
+	
+	return tags
+}
+
 func (hnd *RouterHandler) StaticSecretDetailView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -82,10 +100,13 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
+	additionalTags := parseAdditionalTags(r)
+
 	req.Name = name
 	req.Cluster = cluster
 	req.Type = secrets.SecretTypeStaticSecret
 	req.Value = value
+	req.AdditionalTags = additionalTags
 
 	resp, err := hnd.secretsService.CreateSecret(ctx, req)
 	if err != nil {

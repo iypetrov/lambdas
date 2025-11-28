@@ -84,12 +84,15 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
+	additionalTags := parseAdditionalTags(r)
+	if _, exists := additionalTags["ExpiresAt"]; !exists {
+		additionalTags["ExpiresAt"] = time.Now().UTC().Format(time.DateOnly)
+	}
+
 	req.Name = name
 	req.Cluster = cluster
 	req.Type = secrets.SecretTypeTLSCertificate
-	req.AdditionalTags = map[string]string{
-		"ExpiresAt": time.Now().UTC().Format(time.DateOnly),
-	}
+	req.AdditionalTags = additionalTags
 
 	data := secrets.TLSCertificateData{
 		Crt: strings.TrimSpace(crt),
