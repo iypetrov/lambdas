@@ -98,7 +98,7 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 		if err == nil {
 			return res, nil
 		}
-		return res, backoff.Permanent(err)
+		return res, err
 	})
 	if retryErr != nil {
 		hnd.log.Warn("Secret created but not yet available after retries: %v", retryErr)
@@ -155,7 +155,7 @@ func (hnd *RouterHandler) UpdateStaticSecret(w http.ResponseWriter, r *http.Requ
 			}
 			return res, fmt.Errorf("secret value not yet updated")
 		}
-		return res, backoff.Permanent(err)
+		return res, err
 	})
 
 	details, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)

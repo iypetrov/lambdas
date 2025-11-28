@@ -114,7 +114,7 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		if err == nil {
 			return res, nil
 		}
-		return res, backoff.Permanent(err)
+		return res, err
 	})
 	if err != nil {
 		hnd.log.Warn("Certificate imported but not yet available after retries: %v", err)
@@ -181,7 +181,7 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 			}
 			return res, fmt.Errorf("certificate value not yet updated")
 		}
-		return res, backoff.Permanent(err)
+		return res, err
 	})
 
 	details, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
