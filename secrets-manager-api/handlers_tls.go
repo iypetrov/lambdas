@@ -324,11 +324,17 @@ func (hnd *RouterHandler) AddTLSCertificateTag(w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
+	details, err := hnd.secretsService.GetSecretDetails(ctx, req.Name)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return nil
+	}
+
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Tag '%s' added successfully", key),
 		StatusCode: http.StatusOK,
 	})
-	return nil
+	return utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http.Request) error {
@@ -358,9 +364,15 @@ func (hnd *RouterHandler) RemoveTLSCertificateTag(w http.ResponseWriter, r *http
 		return nil
 	}
 
+	details, err := hnd.secretsService.GetSecretDetails(ctx, req.Name)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return nil
+	}
+
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Tag '%s' removed successfully", key),
 		StatusCode: http.StatusOK,
 	})
-	return nil
+	return utils.Render(w, r, views.TLSCertificateDetailPage(details, string(hnd.config.App.Env)))
 }

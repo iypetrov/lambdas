@@ -299,11 +299,17 @@ func (hnd *RouterHandler) AddStaticSecretTag(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 
+	details, err := hnd.secretsService.GetSecretDetails(ctx, req.Name)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return nil
+	}
+
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Tag '%s' added successfully", key),
 		StatusCode: http.StatusOK,
 	})
-	return nil
+	return utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
 }
 
 func (hnd *RouterHandler) RemoveStaticSecretTag(w http.ResponseWriter, r *http.Request) error {
@@ -333,11 +339,17 @@ func (hnd *RouterHandler) RemoveStaticSecretTag(w http.ResponseWriter, r *http.R
 		return nil
 	}
 
+	details, err := hnd.secretsService.GetSecretDetails(ctx, req.Name)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return nil
+	}
+
 	status.AddToast(w, status.Toast{
 		Message:    fmt.Sprintf("Tag '%s' removed successfully", key),
 		StatusCode: http.StatusOK,
 	})
-	return nil
+	return utils.Render(w, r, views.StaticSecretDetailPage(details, string(hnd.config.App.Env)))
 }
 
 
