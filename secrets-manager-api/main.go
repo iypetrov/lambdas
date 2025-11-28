@@ -12,18 +12,25 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
+	"github.com/iypetrov/lambdas/secrets-manager-api/images"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 )
 
 func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *chi.Mux {
 	secretService := secrets.NewService(ctx, cfg, log)
 	clusterService := clusters.NewService(ctx, cfg, log)
+	
+	var imagesService *images.Service
+	if cfg.App.Env != config.Local {
+		imagesService = images.NewService(ctx, cfg, log)
+	}
 
 	handler := RouterHandler{
 		config:         cfg,
 		log:            log,
 		secretsService: secretService,
 		clusterService: clusterService,
+		imagesService:      imagesService,
 	}
 
 	return NewRouter(&handler)

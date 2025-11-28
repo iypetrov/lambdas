@@ -7,6 +7,7 @@ import (
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
+	"github.com/iypetrov/lambdas/secrets-manager-api/images"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 	"github.com/iypetrov/lambdas/secrets-manager-api/status"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/components"
@@ -20,6 +21,7 @@ type RouterHandler struct {
 	log            logger.Logger
 	secretsService *secrets.Service
 	clusterService *clusters.Service
+	imagesService      *images.Service
 
 	createStaticSecretMu sync.Mutex
 	updateStaticSecretMu sync.Mutex
@@ -31,7 +33,30 @@ type RouterHandler struct {
 }
 
 func (hnd *RouterHandler) StaticFiles() http.Handler {
-	return http.StripPrefix("/static", http.FileServer(http.Dir("static")))
+	if hnd.config.App.Env == config.Local {
+		return http.StripPrefix("/static", http.FileServer(http.Dir("static")))
+	}
+	return http.StripPrefix("/static", http.HandlerFunc(hnd.serveStaticFromS3))
+}
+
+func (hnd *RouterHandler) serveStaticFromS3(w http.ResponseWriter, r *http.Request) {
+	if hnd.imagesService == nil {
+		hnd.log.Error("S3 service is not initialized")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Get the file path (prefix already stripped by StripPrefix)
+	filePath := r.URL.Path
+	if filePath == "" || filePath == "/" {
+		http.NotFound(w, r)
+		return
+	}
+	
+	if err := hnd.imagesService.ServeStaticFile(w, r, filePath); err != nil {
+		http.NotFound(w, r)
+		return
+	}
 }
 
 func (hnd *RouterHandler) HomeView(w http.ResponseWriter, r *http.Request) {

@@ -34,6 +34,9 @@ type Config struct {
 	App struct {
 		Env Environment
 	}
+	S3 struct {
+		Bucket string
+	}
 }
 
 func Inject(ctx context.Context, cfg Config) context.Context {
@@ -56,6 +59,8 @@ func New() Config {
 	if !cfg.App.Env.IsValid() {
 		cfg.App.Env = Prod
 	}
+
+	cfg.S3.Bucket = os.Getenv("S3_BUCKET")
 
 	return cfg
 }
