@@ -33,11 +33,9 @@ templ TLSCertificatesPage(env string) {
 		</div>
 		<div 
             id="tls-certificates-table" 
-            x-bind:hx-get={ fmt.Sprintf("'/%s/api/v0/tls-certificates?cluster=' + ($store.cluster.selectedCluster || '')", env) }
-            hx-trigger="load, refresh from:body, refreshTLSCertificatesTable from:body"
-            hx-swap="innerHTML"
-            hx-target="this"
-            x-effect="$watch('$store.cluster.selectedCluster', () => htmx.trigger('body', 'refreshTLSCertificatesTable'))"
+            x-data={ fmt.Sprintf("{ env: '%s', loadTable() { const cluster = $store.cluster.selectedCluster || ''; htmx.ajax('GET', '/' + this.env + '/api/v0/tls-certificates?cluster=' + cluster, { target: '#tls-certificates-table', swap: 'innerHTML' }); } }", env) }
+            x-init="loadTable(); document.body.addEventListener('refreshTLSCertificatesTable', () => loadTable())"
+            x-effect="$watch('$store.cluster.selectedCluster', () => loadTable())"
         >
 			<div class="flex items-center justify-center p-8">
 				<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
