@@ -226,7 +226,7 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		hnd.log.Warn("Certificate deleted but still exists after retries: %v", retryErr)
 	}
 
-	cluster, secretType, err := parseSecretName(secretName)
+	cluster, secretType, err := secrets.ParseSecretName(secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())

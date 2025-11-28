@@ -3,7 +3,6 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -186,7 +185,6 @@ func (s *Service) ListSecrets(ctx context.Context, secretType SecretType, cluste
 		}
 
 		for _, secret := range result.SecretList {
-			// Filter by tags
 			secretTypeTag := ""
 			secretCluster := ""
 			tags := make(map[string]string)
@@ -240,38 +238,11 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		return nil, fmt.Errorf("%s", err.Error())
 	}
 
-	tagsMap := make(map[string]string)
-	var secretType SecretType
-	var cluster string
-
-	for _, tag := range result.Tags {
-		if tag.Key != nil && tag.Value != nil {
-			tagsMap[*tag.Key] = *tag.Value
-			if *tag.Key == "Type" {
-				if *tag.Value == string(SecretTypeStaticSecret) {
-					secretType = SecretTypeStaticSecret
-				} else if *tag.Value == string(SecretTypeTLSCertificate) {
-					secretType = SecretTypeTLSCertificate
-				}
-			}
-			if *tag.Key == "Cluster" {
-				cluster = *tag.Value
-			}
-		}
-	}
-
-	sortedTagKeys := make([]string, 0, len(tagsMap))
-	for key := range tagsMap {
-		sortedTagKeys = append(sortedTagKeys, key)
-	}
-	sort.Strings(sortedTagKeys)
-
-	tags := make(TagMap, 0, len(sortedTagKeys))
-	for _, key := range sortedTagKeys {
-		tags = append(tags, TagPair{
-			Key:   key,
-			Value: tagsMap[key],
-		})
+	tags := convertToTags(result.Tags)
+	cluster, secretType, err := ParseSecretName(*result.Name)
+	if err != nil {
+		s.log.Error("Error parsing secret name %s: %v", *result.Name, err)
+		return nil, fmt.Errorf("error parsing secret name: %s", err.Error())
 	}
 
 	var createdDate string

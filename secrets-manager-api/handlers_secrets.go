@@ -197,7 +197,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		return res, fmt.Errorf("secret still exists")
 	})
 
-	cluster, secretType, err := parseSecretName(secretName)
+	cluster, secretType, err := secrets.ParseSecretName(secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorBadRequest(err))
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())

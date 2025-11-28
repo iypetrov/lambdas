@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
@@ -82,30 +80,4 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 		clusters = []string{}
 	}
 	return utils.Render(w, r, components.ClusterOptions(clusters))
-}
-
-
-// parseSecretName extracts cluster and type from a secret name
-// Format: RESTRICTED.<cluster>.<TYPE>.<name>
-// Returns: cluster, secretType, error
-func parseSecretName(secretName string) (string, secrets.SecretType, error) {
-	parts := strings.Split(secretName, ".")
-	if len(parts) < 4 || parts[0] != "RESTRICTED" {
-		return "", "", fmt.Errorf("invalid secret name format")
-	}
-
-	cluster := parts[1]
-	typePart := parts[2]
-
-	var secretType secrets.SecretType
-	switch typePart {
-	case "STATIC_SECRET":
-		secretType = secrets.SecretTypeStaticSecret
-	case "TLS_CERTIFICATE":
-		secretType = secrets.SecretTypeTLSCertificate
-	default:
-		return "", "", fmt.Errorf("unknown secret type: %s", typePart)
-	}
-
-	return cluster, secretType, nil
 }

@@ -1,5 +1,9 @@
 package secrets
 
+import (
+	awssmtype "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+)
+
 type SecretType string
 
 const (
@@ -30,6 +34,17 @@ type TagMap []TagPair
 type TagPair struct {
 	Key   string
 	Value string
+}
+
+func convertToTags(awstp []awssmtype.Tag) TagMap {
+	var tm TagMap
+	for _, t := range awstp {
+		tm = append(tm, TagPair{
+			Key:   *t.Key,
+			Value: *t.Value,
+		})
+	}
+	return tm
 }
 
 func (tm TagMap) ToMap() map[string]string {
