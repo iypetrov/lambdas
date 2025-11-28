@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/cenkalti/backoff/v5"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
@@ -95,19 +95,36 @@ func (hnd *RouterHandler) CreateStaticSecret(w http.ResponseWriter, r *http.Requ
 
 	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err == nil {
-			return res, nil
+		if err != nil {
+			return res, err
 		}
-		return res, err
+		if res.Value != req.Value {
+			return res, fmt.Errorf("secret value not yet set correctly")
+		}
+		return res, nil
 	})
 	if retryErr != nil {
 		hnd.log.Warn("Secret created but not yet available after retries: %v", retryErr)
 	}
 
-	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+	secretsList, err := utils.BackoffRetry(ctx, func() ([]secrets.Secret, error) {
+		list, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+		if err != nil {
+			return list, err
+		}
+		for _, secret := range list {
+			if secret.Name == resp.Name {
+				return list, nil
+			}
+		}
+		return list, fmt.Errorf("secret not yet visible in list")
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyStaticSecretsTable())
+		secretsList, err = hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return utils.Render(w, r, components.EmptyStaticSecretsTable())
+		}
 	}
 
 	status.AddToast(w, status.Toast{
@@ -147,21 +164,33 @@ func (hnd *RouterHandler) UpdateStaticSecret(w http.ResponseWriter, r *http.Requ
 		return nil
 	}
 
-	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err == nil {
-			if res.Value == value {
-				return res, nil
-			}
+		if err != nil {
+			return res, err
+		}
+		if res.Value != value {
 			return res, fmt.Errorf("secret value not yet updated")
 		}
-		return res, err
+		return res, nil
 	})
+	if retryErr != nil {
+		hnd.log.Warn("Secret value updated but validation failed after retries: %v", retryErr)
+	}
 
-	details, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+	details, err := utils.BackoffRetry(ctx, func() (*secrets.GetSecretDetailsResponse, error) {
+		det, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+		if err != nil {
+			return det, err
+		}
+		return det, nil
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return nil
+		details, err = hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return nil
+		}
 	}
 
 	status.AddToast(w, status.Toast{
@@ -189,13 +218,19 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err != nil {
-			return res, backoff.Permanent(err)
+			if strings.Contains(err.Error(), "ResourceNotFoundException") {
+				return nil, nil
+			}
+			return res, err
 		}
 		return res, fmt.Errorf("secret still exists")
 	})
+	if retryErr != nil {
+		hnd.log.Warn("Secret deletion validated but GetSecret check failed: %v", retryErr)
+	}
 
 	cluster, secretType, err := secrets.ParseSecretName(secretName)
 	if err != nil {
@@ -203,10 +238,24 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	secretsList, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+	secretsList, err := utils.BackoffRetry(ctx, func() ([]secrets.Secret, error) {
+		list, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+		if err != nil {
+			return list, err
+		}
+		for _, secret := range list {
+			if secret.Name == resp.Name {
+				return list, fmt.Errorf("secret still visible in list")
+			}
+		}
+		return list, nil
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyStaticSecretsTable())
+		secretsList, err = hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return utils.Render(w, r, components.EmptyStaticSecretsTable())
+		}
 	}
 
 	status.AddToast(w, status.Toast{

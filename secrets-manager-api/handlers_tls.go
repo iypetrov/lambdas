@@ -6,7 +6,6 @@ import (
 	"time"
 	"strings"
 
-	"github.com/cenkalti/backoff/v5"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
@@ -109,21 +108,38 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	_, err = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err == nil {
-			return res, nil
+		if err != nil {
+			return res, err
 		}
-		return res, err
+		if res.Value != req.Value {
+			return res, fmt.Errorf("certificate value not yet set correctly")
+		}
+		return res, nil
 	})
-	if err != nil {
-		hnd.log.Warn("Certificate imported but not yet available after retries: %v", err)
+	if retryErr != nil {
+		hnd.log.Warn("Certificate imported but not yet available after retries: %v", retryErr)
 	}
 
-	secretsList, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+	secretsList, err := utils.BackoffRetry(ctx, func() ([]secrets.Secret, error) {
+		list, err := hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+		if err != nil {
+			return list, err
+		}
+		for _, secret := range list {
+			if secret.Name == resp.Name {
+				return list, nil
+			}
+		}
+		return list, fmt.Errorf("certificate not yet visible in list")
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+		secretsList, err = hnd.secretsService.ListSecrets(ctx, req.Type, req.Cluster)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+		}
 	}
 
 	status.AddToast(w, status.Toast{
@@ -173,21 +189,33 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
-	_, _ = utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err == nil {
-			if res.Value == jsonData {
-				return res, nil
-			}
+		if err != nil {
+			return res, err
+		}
+		if res.Value != jsonData {
 			return res, fmt.Errorf("certificate value not yet updated")
 		}
-		return res, err
+		return res, nil
 	})
+	if retryErr != nil {
+		hnd.log.Warn("Certificate value updated but validation failed after retries: %v", retryErr)
+	}
 
-	details, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+	details, err := utils.BackoffRetry(ctx, func() (*secrets.GetSecretDetailsResponse, error) {
+		det, err := hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+		if err != nil {
+			return det, err
+		}
+		return det, nil
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return nil
+		details, err = hnd.secretsService.GetSecretDetails(ctx, resp.Name)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return nil
+		}
 	}
 
 	status.AddToast(w, status.Toast{
@@ -218,12 +246,15 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
 		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
 		if err != nil {
-			return res, backoff.Permanent(err)
+			if strings.Contains(err.Error(), "ResourceNotFoundException") {
+				return nil, nil
+			}
+			return res, err
 		}
-		return res, fmt.Errorf("secret still exists")
+		return res, fmt.Errorf("certificate still exists")
 	})
 	if retryErr != nil {
-		hnd.log.Warn("Certificate deleted but still exists after retries: %v", retryErr)
+		hnd.log.Warn("Certificate deletion validated but GetSecret check failed: %v", retryErr)
 	}
 
 	cluster, secretType, err := secrets.ParseSecretName(secretName)
@@ -232,10 +263,24 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	secretsList, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+	secretsList, err := utils.BackoffRetry(ctx, func() ([]secrets.Secret, error) {
+		list, err := hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+		if err != nil {
+			return list, err
+		}
+		for _, secret := range list {
+			if secret.Name == resp.Name {
+				return list, fmt.Errorf("certificate still visible in list")
+			}
+		}
+		return list, nil
+	})
 	if err != nil {
-		status.AddToast(w, status.ErrorInternalServerError(err))
-		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+		secretsList, err = hnd.secretsService.ListSecrets(ctx, secretType, cluster)
+		if err != nil {
+			status.AddToast(w, status.ErrorInternalServerError(err))
+			return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+		}
 	}
 
 	status.AddToast(w, status.Toast{
