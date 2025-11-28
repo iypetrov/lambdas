@@ -19,11 +19,7 @@ import (
 func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *chi.Mux {
 	secretService := secrets.NewService(ctx, cfg, log)
 	clusterService := clusters.NewService(ctx, cfg, log)
-	
-	var imagesService *images.Service
-	if cfg.App.Env != config.Local {
-		imagesService = images.NewService(ctx, cfg, log)
-	}
+	imagesService := images.NewService(ctx, cfg, log)
 
 	handler := RouterHandler{
 		config:         cfg,
