@@ -53,12 +53,6 @@ templ TLSCertificateDetailPage(details *secrets.GetSecretDetailsResponse, env st
 							}
 						</dd>
 					</div>
-					if details.VersionID != "" {
-						<div>
-							<dt class="text-sm font-medium text-gray-500">Version ID</dt>
-							<dd class="mt-1 text-sm text-gray-900 font-mono">{ details.VersionID }</dd>
-						</div>
-					}
 					if details.CreatedDate != "" {
 						<div>
 							<dt class="text-sm font-medium text-gray-500">Created Date</dt>

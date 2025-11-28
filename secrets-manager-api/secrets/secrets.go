@@ -2,7 +2,6 @@ package secrets
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -95,7 +94,6 @@ func (s *Service) CreateSecret(ctx context.Context, req CreateSecretRequest) (*C
 	return &CreateSecretResponse{
 		Name:      *result.Name,
 		ARN:       *result.ARN,
-		VersionID: *result.VersionId,
 	}, nil
 }
 
@@ -132,7 +130,6 @@ func (s *Service) UpdateSecret(ctx context.Context, req UpdateSecretRequest) (*U
 	return &UpdateSecretResponse{
 		Name:      *result.Name,
 		ARN:       *result.ARN,
-		VersionID: *result.VersionId,
 	}, nil
 }
 
@@ -263,7 +260,6 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		}
 	}
 
-	// Sort tag keys alphabetically and create ordered TagMap
 	sortedTagKeys := make([]string, 0, len(tagsMap))
 	for key := range tagsMap {
 		sortedTagKeys = append(sortedTagKeys, key)
@@ -293,29 +289,6 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		lastRotatedDate = result.LastRotatedDate.Format(time.RFC3339)
 	}
 
-	var versionID string
-	if len(result.VersionIdsToStages) > 0 {
-		// Get the AWSCURRENT version ID if available, otherwise get the first one
-		for vID, stages := range result.VersionIdsToStages {
-			for _, stage := range stages {
-				if stage == "AWSCURRENT" {
-					versionID = vID
-					break
-				}
-			}
-			if versionID != "" {
-				break
-			}
-		}
-		// If no AWSCURRENT found, get the first version ID
-		if versionID == "" {
-			for vID := range result.VersionIdsToStages {
-				versionID = vID
-				break
-			}
-		}
-	}
-
 	var description string
 	if result.Description != nil {
 		description = *result.Description
@@ -328,7 +301,6 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		Type:            secretType,
 		Cluster:         cluster,
 		Tags:            tags,
-		VersionID:       versionID,
 		CreatedDate:     createdDate,
 		LastChangedDate: lastChangedDate,
 		LastRotatedDate: lastRotatedDate,
@@ -346,14 +318,12 @@ func (s *Service) AddTag(ctx context.Context, req AddTagRequest) (*UpdateTagsRes
 			},
 		},
 	}
-
 	_, err := s.client.TagResource(ctx, tagReq)
 	if err != nil {
 		s.log.Error("Error adding tag to secret %s: %v", req.Name, err)
 		return nil, fmt.Errorf("%s", err.Error())
 	}
 
-	// Get the ARN for the response
 	describeReq := &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(req.Name),
 	}
@@ -375,14 +345,12 @@ func (s *Service) RemoveTag(ctx context.Context, req RemoveTagRequest) (*UpdateT
 		SecretId: aws.String(req.Name),
 		TagKeys:  []string{req.Key},
 	}
-
 	_, err := s.client.UntagResource(ctx, untagReq)
 	if err != nil {
 		s.log.Error("Error removing tag from secret %s: %v", req.Name, err)
 		return nil, fmt.Errorf("%s", err.Error())
 	}
 
-	// Get the ARN for the response
 	describeReq := &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(req.Name),
 	}
@@ -414,38 +382,4 @@ func (s *Service) GetStatistics(ctx context.Context, cluster string) (*Statistic
 		StaticSecretsCount:  len(staticSecrets),
 		TLSCertificatesCount: len(tlsCertificates),
 	}, nil
-}
-
-// MarshalTLSCertificateData marshals TLS certificate data to JSON string
-func MarshalTLSCertificateData(crt, key string) (string, error) {
-	data := TLSCertificateData{
-		Crt: strings.TrimSpace(crt),
-		Key: strings.TrimSpace(key),
-	}
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal TLS certificate data: %w", err)
-	}
-	return string(jsonBytes), nil
-}
-
-// UnmarshalTLSCertificateData unmarshals TLS certificate data from JSON string
-// It also supports backward compatibility with the old format (crt\nkey)
-func UnmarshalTLSCertificateData(value string) (*TLSCertificateData, error) {
-	// Try to parse as JSON first
-	var data TLSCertificateData
-	if err := json.Unmarshal([]byte(value), &data); err == nil {
-		return &data, nil
-	}
-
-	// If JSON parsing fails, try the old format (crt\nkey)
-	parts := strings.SplitN(value, "\n", 2)
-	if len(parts) == 2 {
-		return &TLSCertificateData{
-			Crt: strings.TrimSpace(parts[0]),
-			Key: strings.TrimSpace(parts[1]),
-		}, nil
-	}
-
-	return nil, fmt.Errorf("invalid TLS certificate data format")
 }

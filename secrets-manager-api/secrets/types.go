@@ -46,7 +46,6 @@ type Secret struct {
 	Type        SecretType        `json:"type"`
 	Cluster     string            `json:"cluster"`
 	Tags        map[string]string `json:"tags"`
-	VersionID   string            `json:"version_id,omitempty"`
 	CreatedDate string            `json:"created_date,omitempty"`
 }
 
@@ -61,7 +60,6 @@ type CreateSecretRequest struct {
 type CreateSecretResponse struct {
 	Name      string `json:"name"`
 	ARN       string `json:"arn"`
-	VersionID string `json:"version_id"`
 }
 
 type GetSecretResponse struct {
@@ -76,7 +74,6 @@ type UpdateSecretRequest struct {
 type UpdateSecretResponse struct {
 	Name      string `json:"name"`
 	ARN       string `json:"arn"`
-	VersionID string `json:"version_id"`
 }
 
 type DeleteSecretResponse struct {
@@ -96,7 +93,6 @@ type GetSecretDetailsResponse struct {
 	Type         SecretType        `json:"type"`
 	Cluster      string            `json:"cluster"`
 	Tags         TagMap            `json:"tags"`
-	VersionID    string            `json:"version_id,omitempty"`
 	CreatedDate  string            `json:"created_date,omitempty"`
 	LastChangedDate string         `json:"last_changed_date,omitempty"`
 	LastRotatedDate  string        `json:"last_rotated_date,omitempty"`
