@@ -1,0 +1,27 @@
+package components
+
+import (
+	"fmt"
+)
+
+type ClusterDropdownProps struct {
+	Env string
+}
+
+templ ClusterDropdown(props ClusterDropdownProps) {
+	<div class="flex items-center gap-4" x-data={ fmt.Sprintf("clusterDropdown('%s')", props.Env) }>
+		<label class="text-sm font-medium text-gray-700">Cluster:</label>
+		<select
+			x-on:change="handleChange($event)"
+			x-bind:value="$store.cluster.selectedCluster"
+			class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+			hx-get={ fmt.Sprintf("/%s/api/v0/clusters", props.Env) }
+			hx-trigger="load"
+			hx-swap="innerHTML"
+			hx-target="this"
+		>
+			<option value="">Loading clusters...</option>
+		</select>
+	</div>
+}
+

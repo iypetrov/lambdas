@@ -13,7 +13,7 @@ type LayoutProps struct {
 
 templ Layout(props LayoutProps) {
 	@templates.Base() {
-		<div class="flex min-h-screen w-full" x-data="{ showCreateStaticModal: false, showImportTLSModal: false, showValueModal: false, selectedCluster: '' }">
+		<div class="flex min-h-screen w-full" x-data="{ showCreateStaticModal: false, showImportTLSModal: false, showValueModal: false }">
 			<aside class="w-64 bg-gray-900 min-h-screen flex flex-col">
 				<div class="w-full p-6 flex flex-col items-center justify-center border-b border-gray-800">
 					<div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-2">
