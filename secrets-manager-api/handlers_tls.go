@@ -291,7 +291,7 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
+	_, err := hnd.secretsService.DeleteSecret(ctx, secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
