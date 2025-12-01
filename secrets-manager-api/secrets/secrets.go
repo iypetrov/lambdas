@@ -338,6 +338,26 @@ func (s *Service) RemoveTag(ctx context.Context, req RemoveTagRequest) (*UpdateT
 	}, nil
 }
 
+func (s *Service) UpdateTag(ctx context.Context, req UpdateTagRequest) (*UpdateTagsResponse, error) {
+	_, err := s.RemoveTag(ctx, RemoveTagRequest{
+		Name: req.Name,
+		Key:  req.Key,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp, err := s.AddTag(ctx, AddTagRequest{
+		Name:  req.Name,
+		Key:   req.Key,
+		Value: req.Value,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func (s *Service) GetStatistics(ctx context.Context, cluster string) (*Statistics, error) {
 	staticSecrets, err := s.ListSecrets(ctx, SecretTypeStaticSecret, cluster)
 	if err != nil {

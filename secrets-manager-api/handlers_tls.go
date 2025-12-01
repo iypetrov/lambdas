@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"crypto/tls"
+	"crypto/x509"
 
 	"github.com/go-chi/chi/v5"
 
@@ -106,6 +108,24 @@ func (hnd *RouterHandler) ListTLSCertificates(w http.ResponseWriter, r *http.Req
 	return utils.Render(w, r, components.TLSCertificatesTable(secretsList, string(hnd.config.App.Env), searchName, searchTagFilters, allTagPairs))
 }
 
+func validateTLSCertificate(crt, key string) (*x509.Certificate, error) {
+	pair, err := tls.X509KeyPair([]byte(crt), []byte(key))
+	if err != nil {
+		return nil, fmt.Errorf("invalid cert/key pair: %v", err)
+	}
+
+	if len(pair.Certificate) == 0 {
+		return nil, fmt.Errorf("certificate chain is empty")
+	}
+
+	cert, err := x509.ParseCertificate(pair.Certificate[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse x509 certificate: %v", err)
+	}
+
+	return cert, nil
+}
+
 func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Request) error {
 	hnd.importTLSCertificateMu.Lock()
 	defer hnd.importTLSCertificateMu.Unlock()
@@ -133,10 +153,15 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
+	cert, err := validateTLSCertificate(crt, key)
+	if err != nil {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("invalid TLS certificate or key: %v", err)))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+	}
 
 	additionalTags := parseAdditionalTags(r)
 	if _, exists := additionalTags["ExpiresAt"]; !exists {
-		additionalTags["ExpiresAt"] = time.Now().UTC().Format(time.DateOnly)
+		additionalTags["ExpiresAt"] = cert.NotAfter.Format(time.RFC3339)
 	}
 
 	req.Name = name
@@ -218,9 +243,20 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 	crt := r.FormValue("crt")
 	key := r.FormValue("key")
 
+	oldDetails, err := hnd.secretsService.GetSecretDetails(ctx, secretName)
+	if err != nil {
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return nil
+	}
+
 	if crt == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
-		return nil
+		return utils.Render(w, r, views.TLSCertificateDetailPage(oldDetails, string(hnd.config.App.Env)))
+	}
+	cert, err := validateTLSCertificate(crt, key)
+	if err != nil {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("invalid TLS certificate or key: %v", err)))
+		return utils.Render(w, r, views.TLSCertificateDetailPage(oldDetails, string(hnd.config.App.Env)))
 	}
 
 	data := secrets.TLSCertificateData{
@@ -241,6 +277,15 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return nil
+	}
+
+	_, err = hnd.secretsService.UpdateTag(ctx, secrets.UpdateTagRequest{
+		Name:  secretName,
+		Key:   "ExpiresAt",
+		Value: cert.NotAfter.Format(time.RFC3339),
+	})
+	if err != nil {
+		hnd.log.Error("Failed to update ExpiresAt tag for certificate '%s': %v", secretName, err)
 	}
 
 	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
@@ -269,6 +314,12 @@ func (hnd *RouterHandler) UpdateTLSCertificate(w http.ResponseWriter, r *http.Re
 		if err != nil {
 			status.AddToast(w, status.ErrorInternalServerError(err))
 			return nil
+		}
+		for _, i := range details.Tags {
+			if i.Key == "ExpiresAt" && i.Value == cert.NotAfter.Format(time.RFC3339) {
+				status.AddToast(w, status.ErrorInternalServerError(err))
+				return nil
+			}
 		}
 	}
 

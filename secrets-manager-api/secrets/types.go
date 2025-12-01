@@ -120,6 +120,12 @@ type AddTagRequest struct {
 	Value string `json:"value"`
 }
 
+type UpdateTagRequest struct {
+	Name  string `json:"name"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type RemoveTagRequest struct {
 	Name string `json:"name"`
 	Key  string `json:"key"`
