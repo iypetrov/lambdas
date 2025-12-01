@@ -310,25 +310,24 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
 
-	resp, err := hnd.secretsService.DeleteSecret(ctx, secretName)
+	_, err := hnd.secretsService.DeleteSecret(ctx, secretName)
 	if err != nil {
 		status.AddToast(w, status.ErrorInternalServerError(err))
 		return utils.Render(w, r, components.EmptyStaticSecretsTable())
 	}
-
-	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
-		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err != nil {
-			if strings.Contains(err.Error(), "ResourceNotFoundException") {
-				return nil, nil
-			}
-			return res, err
-		}
-		return res, fmt.Errorf("secret still exists")
-	})
-	if retryErr != nil {
-		hnd.log.Warn("Secret deletion validated but GetSecret check failed: %v", retryErr)
-	}
+	// _, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	// 	res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
+	// 	if err != nil {
+	// 		if strings.Contains(err.Error(), "ResourceNotFoundException") {
+	// 			return nil, nil
+	// 		}
+	// 		return res, err
+	// 	}
+	// 	return res, fmt.Errorf("secret still exists")
+	// })
+	// if retryErr != nil {
+	// 	hnd.log.Warn("Secret deletion validated but GetSecret check failed: %v", retryErr)
+	// }
 
 	cluster, secretType, err := secrets.ParseSecretName(secretName)
 	if err != nil {
@@ -342,7 +341,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 			return list, err
 		}
 		for _, secret := range list {
-			if secret.Name == resp.Name {
+			if secret.Name == secretName {
 				return list, fmt.Errorf("secret still visible in list")
 			}
 		}
@@ -357,7 +356,7 @@ func (hnd *RouterHandler) DeleteStaticSecret(w http.ResponseWriter, r *http.Requ
 	}
 
 	status.AddToast(w, status.Toast{
-		Message:    fmt.Sprintf("Secret '%s' deleted successfully", resp.Name),
+		Message:    fmt.Sprintf("Secret '%s' is scheduled for deletion successfully", secretName),
 		StatusCode: http.StatusOK,
 	})
 	allTagPairs := getAllTagPairs(secretsList)

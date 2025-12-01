@@ -297,19 +297,19 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
 
-	_, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
-		res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
-		if err != nil {
-			if strings.Contains(err.Error(), "ResourceNotFoundException") {
-				return nil, nil
-			}
-			return res, err
-		}
-		return res, fmt.Errorf("certificate still exists")
-	})
-	if retryErr != nil {
-		hnd.log.Warn("Certificate deletion validated but GetSecret check failed: %v", retryErr)
-	}
+	// _, retryErr := utils.BackoffRetry(ctx, func() (*secrets.GetSecretResponse, error) {
+	// 	res, err := hnd.secretsService.GetSecret(ctx, resp.Name)
+	// 	if err != nil {
+	// 		if strings.Contains(err.Error(), "ResourceNotFoundException") {
+	// 			return nil, nil
+	// 		}
+	// 		return res, err
+	// 	}
+	// 	return res, fmt.Errorf("certificate still exists")
+	// })
+	// if retryErr != nil {
+	// 	hnd.log.Warn("Certificate deletion validated but GetSecret check failed: %v", retryErr)
+	// }
 
 	cluster, secretType, err := secrets.ParseSecretName(secretName)
 	if err != nil {
@@ -323,7 +323,7 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 			return list, err
 		}
 		for _, secret := range list {
-			if secret.Name == resp.Name {
+			if secret.Name == secretName {
 				return list, fmt.Errorf("certificate still visible in list")
 			}
 		}
@@ -338,7 +338,7 @@ func (hnd *RouterHandler) DeleteTLSCertificate(w http.ResponseWriter, r *http.Re
 	}
 
 	status.AddToast(w, status.Toast{
-		Message:    fmt.Sprintf("Certificate '%s' deleted successfully", resp.Name),
+		Message:    fmt.Sprintf("Certificate '%s' is scheduled for deletion successfully", secretName),
 		StatusCode: http.StatusOK,
 	})
 	allTagPairs := getAllTagPairs(secretsList)
