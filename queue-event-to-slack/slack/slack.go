@@ -38,7 +38,7 @@ func NewSlack(ctx context.Context,cfg config.Config, log logger.Logger) (*Slack,
 		SecretId: &cfg.Slack.BotTokenArn,
 	})
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	botToken = *botTokenResp.SecretString
 
