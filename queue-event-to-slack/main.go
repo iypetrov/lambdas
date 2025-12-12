@@ -15,7 +15,10 @@ import (
 func Handler(ctx context.Context, event events.SQSEvent) (interface{}, error) {
 	log := logger.Get(ctx)
 	cfg := config.Get(ctx)
-	slack := slack.NewSlack(ctx, cfg, log)
+	slack, err := slack.NewSlack(ctx, cfg, log)
+	if err != nil {
+		return nil, err
+	}
 	for _, msg := range event.Records {
 		var s3Event events.S3Event
 		if err := json.Unmarshal([]byte(msg.Body), &s3Event); err != nil {
@@ -35,6 +38,7 @@ func Handler(ctx context.Context, event events.SQSEvent) (interface{}, error) {
 				bucket,
 				time,
 			)
+			log.Info(msg)
 			slack.SendMessage(msg)
 		}
 	}

@@ -16,11 +16,11 @@ type Slack struct {
 	log logger.Logger
 }
 
-func NewSlack(ctx context.Context,cfg config.Config, log logger.Logger) *Slack {
+func NewSlack(ctx context.Context,cfg config.Config, log logger.Logger) (*Slack, error) {
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Error("Failed to load AWS config: %v", err)
-		return nil
+		return nil, err
 	}
 	smc := secretsmanager.NewFromConfig(awsCfg)
 
@@ -30,7 +30,7 @@ func NewSlack(ctx context.Context,cfg config.Config, log logger.Logger) *Slack {
 		SecretId: &cfg.Slack.ChannelIDArn,
 	})
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	channelID = *channelIDResp.SecretString
 
@@ -46,7 +46,7 @@ func NewSlack(ctx context.Context,cfg config.Config, log logger.Logger) *Slack {
 		api: slack.New(botToken),
 		channelID: channelID,
 		log: log,
-	}
+	}, nil
 }
 
 func (s *Slack) SendMessage(msg string) error {
