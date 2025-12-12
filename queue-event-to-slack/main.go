@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/iypetrov/lambdas/queue-event-to-slack/config"
 	"github.com/iypetrov/lambdas/queue-event-to-slack/logger"
+	"github.com/iypetrov/lambdas/queue-event-to-slack/slack"
 )
 
 func Handler(ctx context.Context, event events.SQSEvent) (interface{}, error) {
 	log := logger.Get(ctx)
+	cfg := config.Get(ctx)
+	slack := slack.NewSlack(ctx, cfg, log)
 	for _, msg := range event.Records {
 		var s3Event events.S3Event
 		if err := json.Unmarshal([]byte(msg.Body), &s3Event); err != nil {
@@ -24,13 +28,14 @@ func Handler(ctx context.Context, event events.SQSEvent) (interface{}, error) {
 			object := rec.S3.Object.Key
 			eventName := rec.EventName
 			time := rec.EventTime
-			log.Info(
+			msg := fmt.Sprintf(
 				"S3 Event: %s occurred on object %s in bucket %s at %s",
 				eventName,
 				object,
 				bucket,
 				time,
 			)
+			slack.SendMessage(msg)
 		}
 	}
 

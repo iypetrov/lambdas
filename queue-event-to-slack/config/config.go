@@ -30,6 +30,10 @@ type Config struct {
 	App struct {
 		Env Environment
 	}
+	Slack struct {
+		ChannelIDArn   string
+		BotTokenArn	   string
+	}
 }
 
 func Inject(ctx context.Context, cfg Config) context.Context {
@@ -51,6 +55,9 @@ func New() Config {
 	if !cfg.App.Env.IsValid() {
 		cfg.App.Env = Prod
 	}
+
+	cfg.Slack.ChannelIDArn = os.Getenv("SLACK_CHANNEL_ID_ARN")
+	cfg.Slack.BotTokenArn = os.Getenv("SLACK_BOT_TOKEN_ARN")
 
 	return cfg
 }
