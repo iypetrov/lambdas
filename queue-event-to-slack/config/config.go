@@ -44,8 +44,8 @@ func Get(ctx context.Context) Config {
 	return c
 }
 
-func New() *Config {
-	cfg := &Config{}
+func New() Config {
+	cfg := Config{}
 
 	cfg.App.Env = Environment(os.Getenv("APP_ENV"))
 	if !cfg.App.Env.IsValid() {
