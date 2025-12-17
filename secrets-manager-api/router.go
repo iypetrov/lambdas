@@ -25,6 +25,7 @@ func NewRouter(hnd *RouterHandler) *chi.Mux {
 		mux.Route("/v0", func(mux chi.Router) {
 			mux.Get("/statistics", utils.MakeTemplHandler(hnd.GetStatistics))
 			mux.Get("/clusters", utils.MakeTemplHandler(hnd.ListClusters))
+			mux.Get("/audit-events", utils.MakeTemplHandler(hnd.ListAuditEvents))
 
 			mux.Route("/static-secrets", func(mux chi.Router) {
 				mux.Get("/", utils.MakeTemplHandler(hnd.ListStaticSecrets))

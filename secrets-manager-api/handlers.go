@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 
@@ -104,4 +105,21 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 		clusters = []string{}
 	}
 	return utils.Render(w, r, components.ClusterOptions(clusters))
+}
+
+func (hnd *RouterHandler) ListAuditEvents(w http.ResponseWriter, r *http.Request) error {
+	hnd.log.Info("Metadata service is available, fetching audit events")
+	ctx := r.Context()
+	events, err := hnd.metadataService.GetAuditTLSEvent(ctx)
+	if err != nil {
+		hnd.log.Error("Failed to get audit events: %v", err)
+		status.AddToast(w, status.ErrorInternalServerError(err))
+		return utils.Render(w, r, components.EmptyAuditEventsTable())
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].ExpireAt > events[j].ExpireAt
+	})
+
+	return utils.Render(w, r, components.AuditEventsTable(events, string(hnd.config.App.Env)))
 }

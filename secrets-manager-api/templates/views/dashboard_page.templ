@@ -40,6 +40,18 @@ templ DashboardPage(stats *secrets.Statistics, env string) {
 				</div>
 			</div>
 		</div>
+
+		<div
+			id="audit-events-table"
+            hx-get={ fmt.Sprintf("/%s/api/v0/audit-events", env) }
+			hx-target="this"
+            hx-swap="innerHTML"
+            hx-trigger="load"
+		>
+			<div class="flex items-center justify-center p-8">
+				<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+			</div>
+		</div>
 	</div>
 	}
 }

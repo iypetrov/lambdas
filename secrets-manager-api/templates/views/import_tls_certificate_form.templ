@@ -130,6 +130,7 @@ templ ImportTLSCertificateForm(env string) {
 			@icon.LoaderCircle(icon.Props{
 				Size: 16,
 				Class: "htmx-indicator animate-spin",
+	hnd.log.Info("Rendering audit events table with %d events", len(events))
 			})
 		}
 	</div>
