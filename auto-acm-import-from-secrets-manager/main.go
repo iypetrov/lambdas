@@ -46,7 +46,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		log.Info("No response elements found for event %s", eventName)
 		return detail, nil
 	}
-	if len(detail.ResponseElements) >= 1 {
+	if len(detail.ResponseElements) > 1 {
 		log.Warn("Response elements found for event %s: %v", eventName, detail.ResponseElements)
 	}
 
