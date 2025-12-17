@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"sync"
 	"strings"
+	"sync"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
 	"github.com/iypetrov/lambdas/secrets-manager-api/images"
 	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
+	"github.com/iypetrov/lambdas/secrets-manager-api/metadata"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 	"github.com/iypetrov/lambdas/secrets-manager-api/status"
 	"github.com/iypetrov/lambdas/secrets-manager-api/templates/components"
@@ -24,6 +25,7 @@ type RouterHandler struct {
 	secretsService *secrets.Service
 	clusterService *clusters.Service
 	imagesService      *images.Service
+	metadataService   *metadata.Service
 
 	createStaticSecretMu sync.Mutex
 	updateStaticSecretMu sync.Mutex

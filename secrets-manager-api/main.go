@@ -11,8 +11,9 @@ import (
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/clusters"
 	"github.com/iypetrov/lambdas/secrets-manager-api/config"
-	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
 	"github.com/iypetrov/lambdas/secrets-manager-api/images"
+	"github.com/iypetrov/lambdas/secrets-manager-api/logger"
+	"github.com/iypetrov/lambdas/secrets-manager-api/metadata"
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
 )
 
@@ -20,6 +21,7 @@ func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *ch
 	secretService := secrets.NewService(ctx, cfg, log)
 	clusterService := clusters.NewService(ctx, cfg, log)
 	imagesService := images.NewService(ctx, cfg, log)
+	metadataService := metadata.NewService(ctx, cfg, log)
 
 	handler := RouterHandler{
 		config:         cfg,
@@ -27,6 +29,7 @@ func configServer(ctx context.Context, cfg config.Config, log logger.Logger) *ch
 		secretsService: secretService,
 		clusterService: clusterService,
 		imagesService:      imagesService,
+		metadataService:   metadataService,
 	}
 
 	return NewRouter(&handler)
