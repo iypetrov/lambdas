@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
+	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/dynamodb"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/secretsmanager"
 )
@@ -31,6 +33,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	log := logger.Get(ctx)
 	cfg := config.Get(ctx)
 	secretsMangerService := secretsmanager.NewService(ctx, cfg, log)
+	dynamodbService := dynamodb.NewService(ctx, cfg, log)
 
 	var detail SecretsManagerEventDetail
 	if err := json.Unmarshal(event.Detail, &detail); err != nil {
@@ -60,6 +63,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 
 	arnParts := strings.Split(arn, ":")
     secretNameWithSuffix := arnParts[len(arnParts)-1]
+	log.Info("Secret Name with Suffix: %s", secretNameWithSuffix)
 	secretNameWithSuffixParts := strings.Split(secretNameWithSuffix, "-")
 	secretName := strings.Join(secretNameWithSuffixParts[:len(secretNameWithSuffixParts)-1], "-")
 	log.Info("Secret Name: %s", secretName)
@@ -83,6 +87,18 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 
 	log.Info("Secret %s passed validation checks, proceeding with ACM import", secretName)
+
+	t, err := time.Parse(time.RFC3339, "2025-12-17T15:00:55Z")
+	if err != nil {
+		log.Error("Failed to parse time: %v", err)
+		return nil, err
+	}
+
+	err = dynamodbService.WriteAuditTLSEvent(ctx, secretName, eventName, t)
+	if err != nil { 
+		log.Error("Failed to write audit TLS event for secret %s: %v", secretName, err)
+		return nil, err
+	}
 
 	return detail, nil
 }
