@@ -68,26 +68,27 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 
 	for _, tag := range secretDetail.Tags {
-		if tag.Key == secretsmanager.TagType && tag.Value != string(secretsmanager.SecretTypeTLSCertificate) {
-			log.Error("Secret %s is not of type TLS Certificate, skipping", secretName)
-			return detail, fmt.Errorf("secret %s is not of type TLS Certificate, skipping", secretName)
-		}
-
 		if tag.Key == secretsmanager.TagCategory && tag.Value != "Restricted" {
 			log.Error("Secret %s is not in Restricted category, skipping", secretName)
 			return detail, fmt.Errorf("secret %s is not in Restricted category, skipping", secretName)
 		}
 	}
-
-	log.Info("Secret %s passed all validation checks", secretName)
+	log.Info("Secret %s passed validation check for restricted secret", secretName)
 
 	err = dynamodbService.WriteAuditTLSEvent(ctx, secretName, eventName, time.Now().UTC().Add(168 * time.Hour))
 	if err != nil { 
 		log.Error("Failed to write audit TLS event for secret %s: %v", secretName, err)
 		return nil, err
 	}
-
 	log.Info("Secret %s was inserted in the audit-tls-events DynamoDB table", secretName)
+
+	for _, tag := range secretDetail.Tags {
+		if tag.Key == secretsmanager.TagType && tag.Value != string(secretsmanager.SecretTypeTLSCertificate) {
+			log.Error("Secret %s is not of type TLS Certificate, skipping", secretName)
+			return detail, fmt.Errorf("secret %s is not of type TLS Certificate, skipping", secretName)
+		}
+	}
+	log.Info("Secret %s passed validation check for TLS Certificate type", secretName)
 
 	return detail, nil
 }
