@@ -60,8 +60,8 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 
 	arnParts := strings.Split(arn, ":")
     secretNameWithSuffix := arnParts[len(arnParts)-1]
-	secretNameParts := strings.Split(secretNameWithSuffix, "-")
-	secretName := secretNameParts[0]
+	secretNameWithSuffixParts := strings.Split(secretNameWithSuffix, "-")
+	secretName := strings.Join(secretNameWithSuffixParts[:len(secretNameWithSuffixParts)-1], "-")
 	log.Info("Secret Name: %s", secretName)
 
 	secretDetail, err := secretsMangerService.GetSecretDetails(ctx, secretName)
