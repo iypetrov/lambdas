@@ -43,7 +43,7 @@ func (s *Service) WriteAuditTLSEvent(ctx context.Context, secretName, action str
 		ID:         uuid.New().String(),
 		Action:     action,
 		SecretName: secretName,
-		ExpireAt:   expireAt.Add(168 * time.Hour).Unix(),
+		ExpireAt:   expireAt.Unix(),
 	}
 	av, err := attributevalue.MarshalMap(event)
 	if err != nil {

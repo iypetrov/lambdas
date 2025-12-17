@@ -82,13 +82,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 
 	log.Info("Secret %s passed all validation checks", secretName)
 
-	t, err := time.Parse(time.RFC3339, "2025-12-17T15:00:55Z")
-	if err != nil {
-		log.Error("Failed to parse time: %v", err)
-		return nil, err
-	}
-
-	err = dynamodbService.WriteAuditTLSEvent(ctx, secretName, eventName, t)
+	err = dynamodbService.WriteAuditTLSEvent(ctx, secretName, eventName, time.Now().UTC().Add(168 * time.Hour))
 	if err != nil { 
 		log.Error("Failed to write audit TLS event for secret %s: %v", secretName, err)
 		return nil, err
