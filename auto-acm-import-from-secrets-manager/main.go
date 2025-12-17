@@ -11,7 +11,16 @@ import (
 
 func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, error) {
 	log := logger.Get(ctx)
-	log.Info("Hello, received event is: %v", event)
+	log.Info("Received CloudWatch Event")
+	log.Info("version: %s", event.Version)
+	log.Info("id: %s", event.ID)
+	log.Info("detail-type: %s", event.DetailType)
+	log.Info("source: %s", event.Source)
+	log.Info("account: %s", event.AccountID)
+	log.Info("time: %s", event.Time.String())
+	log.Info("region: %s", event.Region)
+	log.Info("resources: %v", event.Resources)
+	log.Info("detail: %v", event.Detail)
 	return event, nil
 }
 
