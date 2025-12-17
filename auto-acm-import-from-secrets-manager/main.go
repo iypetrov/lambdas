@@ -26,15 +26,6 @@ type SecretsManagerEventDetail struct {
 
 func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, error) {
 	log := logger.Get(ctx)
-	log.Info("Received CloudWatch Event")
-	log.Info("version: %s", event.Version)
-	log.Info("id: %s", event.ID)
-	log.Info("detail-type: %s", event.DetailType)
-	log.Info("source: %s", event.Source)
-	log.Info("account: %s", event.AccountID)
-	log.Info("time: %s", event.Time.String())
-	log.Info("region: %s", event.Region)
-	log.Info("resources: %v", event.Resources)
 
 	var detail SecretsManagerEventDetail
 	if err := json.Unmarshal(event.Detail, &detail); err != nil {
@@ -42,13 +33,25 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		return nil, err
 	}
 
-	log.Info("SecretsManager Event Detail:")
-	log.Info("EventName: %s", detail.EventName)
-	log.Info("AWSRegion: %s", detail.AWSRegion)
-	log.Info("EventTime: %s", detail.EventTime)
-	log.Info("RequestParameters: %v", detail.RequestParameters)
-	log.Info("ResponseElements: %v", detail.ResponseElements)
-	log.Info("Resources: %v", detail.Resources)
+	eventName := detail.EventName
+	eventTime := detail.EventTime
+	if len(detail.ResponseElements) == 0 {
+		log.Info("No response elements found for event %s at %s", eventName, eventTime)
+		return detail, nil
+	}
+	if len(detail.ResponseElements) >= 1 {
+		log.Warn("Response elements found for event %s at %s: %v", eventName, eventTime, detail.ResponseElements)
+	}
+
+	if arn, ok := detail.ResponseElements["arn"]; ok {
+		log.Info("ARN found: %v", arn)
+	} else {
+		log.Info("No ARN found in response elements")
+	}
+
+	log.Info("EventName: %s", eventName)
+	log.Info("EventTime: %s", eventTime)
+	log.Info("ResponseElement ARN: %v", detail.ResponseElements["arn"])
 
 	return detail, nil
 }
