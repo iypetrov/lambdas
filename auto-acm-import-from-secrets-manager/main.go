@@ -57,16 +57,10 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		return nil, fmt.Errorf("no ARN found in response elements")
 	}
 
-	log.Info("EventName: %s", eventName)
-	log.Info("EventTime: %s", eventTime)
-	log.Info("ResponseElement ARN: %v", arn)
-
 	arnParts := strings.Split(arn, ":")
     secretNameWithSuffix := arnParts[len(arnParts)-1]
-	log.Info("Secret Name with Suffix: %s", secretNameWithSuffix)
 	secretNameWithSuffixParts := strings.Split(secretNameWithSuffix, "-")
 	secretName := strings.Join(secretNameWithSuffixParts[:len(secretNameWithSuffixParts)-1], "-")
-	log.Info("Secret Name: %s", secretName)
 
 	secretDetail, err := secretsMangerService.GetSecretDetails(ctx, secretName)
 	if err != nil {
@@ -86,7 +80,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		}
 	}
 
-	log.Info("Secret %s passed validation checks, proceeding with ACM import", secretName)
+	log.Info("Secret %s passed all validation checks", secretName)
 
 	t, err := time.Parse(time.RFC3339, "2025-12-17T15:00:55Z")
 	if err != nil {
@@ -99,6 +93,8 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		log.Error("Failed to write audit TLS event for secret %s: %v", secretName, err)
 		return nil, err
 	}
+
+	log.Info("Secret %s was inserted in the audit-tls-events DynamoDB table", secretName)
 
 	return detail, nil
 }
