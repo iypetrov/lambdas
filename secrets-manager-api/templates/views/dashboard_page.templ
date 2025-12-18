@@ -43,10 +43,8 @@ templ DashboardPage(stats *secrets.Statistics, env string) {
 
 		<div
 			id="audit-events-table"
-            hx-get={ fmt.Sprintf("/%s/api/v0/audit-events", env) }
-			hx-target="this"
-            hx-swap="innerHTML"
-            hx-trigger="load"
+			x-data={ fmt.Sprintf("{ env: '%s', loadTable() { const cluster = $store.cluster.selectedCluster || ''; htmx.ajax('GET', '/' + this.env + '/api/v0/audit-events?cluster=' + cluster, { target: '#audit-events-table', swap: 'innerHTML' }); } }", env) }
+			x-init="$nextTick(() => loadTable())"
 		>
 			<div class="flex items-center justify-center p-8">
 				<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>

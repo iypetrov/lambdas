@@ -108,9 +108,9 @@ func (hnd *RouterHandler) ListClusters(w http.ResponseWriter, r *http.Request) e
 }
 
 func (hnd *RouterHandler) ListAuditEvents(w http.ResponseWriter, r *http.Request) error {
-	hnd.log.Info("Metadata service is available, fetching audit events")
 	ctx := r.Context()
-	events, err := hnd.metadataService.GetAuditTLSEvent(ctx)
+	cluster := r.URL.Query().Get("cluster")
+	events, err := hnd.metadataService.GetAuditEvent(ctx, cluster)
 	if err != nil {
 		hnd.log.Error("Failed to get audit events: %v", err)
 		status.AddToast(w, status.ErrorInternalServerError(err))

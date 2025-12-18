@@ -15,6 +15,7 @@ type AuditTLSEvent struct {
 	ID         string `dynamodbav:"id"`
 	Action     string `dynamodbav:"action"`
 	SecretName string `dynamodbav:"secret_name"`
+	Cluster    string `dynamodbav:"cluster"`
 	ExpireAt   int64  `dynamodbav:"expire_at"`
 }
 
@@ -36,7 +37,7 @@ func NewService(ctx context.Context, cfg config.Config, log logger.Logger) *Serv
 	}
 }
 
-func (s *Service) GetAuditTLSEvent(ctx context.Context) ([]AuditTLSEvent, error) {
+func (s *Service) GetAuditEvent(ctx context.Context, cluster string) ([]AuditTLSEvent, error) {
 	var events []AuditTLSEvent
 
 	paginator := dynamodb.NewScanPaginator(s.client, &dynamodb.ScanInput{
@@ -57,5 +58,13 @@ func (s *Service) GetAuditTLSEvent(ctx context.Context) ([]AuditTLSEvent, error)
 
 		events = append(events, pageEvents...)
 	}
-	return events, nil
+
+	var filteredEvents []AuditTLSEvent
+	for _, event := range events {
+		if event.Cluster == cluster {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+
+	return filteredEvents, nil
 }
