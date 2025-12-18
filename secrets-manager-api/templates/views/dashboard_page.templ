@@ -45,6 +45,7 @@ templ DashboardPage(stats *secrets.Statistics, env string) {
 			id="audit-events-table"
 			x-data={ fmt.Sprintf("{ env: '%s', loadTable() { const cluster = $store.cluster.selectedCluster || ''; htmx.ajax('GET', '/' + this.env + '/api/v0/audit-events?cluster=' + cluster, { target: '#audit-events-table', swap: 'innerHTML' }); } }", env) }
 			x-init="$nextTick(() => loadTable())"
+            x-effect="$watch('$store.cluster.selectedCluster', () => loadTable())"
 		>
 			<div class="flex items-center justify-center p-8">
 				<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
