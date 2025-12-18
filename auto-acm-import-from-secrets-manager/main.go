@@ -61,6 +61,8 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	secretNameWithSuffixParts := strings.Split(secretNameWithSuffix, "-")
 	secretName := strings.Join(secretNameWithSuffixParts[:len(secretNameWithSuffixParts)-1], "-")
 
+	cluster := strings.Split(secretName, ".")[1]
+
 	secretDetail, err := secretsMangerService.GetSecretDetails(ctx, secretName)
 	if err != nil {
 		log.Error("Failed to get secret details for %s: %v", secretName, err)
@@ -75,7 +77,13 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 	log.Info("Secret %s passed validation check for restricted secret", secretName)
 
-	err = dynamodbService.WriteAuditTLSEvent(ctx, secretName, eventName, time.Now().UTC().Add(168 * time.Hour))
+	err = dynamodbService.WriteAuditTLSEvent(
+		ctx, 
+		secretName, 
+		cluster,
+		eventName, 
+		time.Now().UTC().Add(168 * time.Hour),
+	)
 	if err != nil { 
 		log.Error("Failed to write audit TLS event for secret %s: %v", secretName, err)
 		return nil, err
