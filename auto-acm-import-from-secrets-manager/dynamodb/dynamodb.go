@@ -17,6 +17,7 @@ type AuditTLSEvent struct {
 	ID         string `dynamodbav:"id"`
 	Action     string `dynamodbav:"action"`
 	SecretName string `dynamodbav:"secret_name"`
+	SecretType string `dynamodbav:"secret_type"`
 	Cluster	   string `dynamodbav:"cluster"`
 	ExpireAt   int64  `dynamodbav:"expire_at"`
 }
@@ -39,11 +40,12 @@ func NewService(ctx context.Context, cfg config.Config, log logger.Logger) *Serv
 	}
 }
 
-func (s *Service) WriteAuditTLSEvent(ctx context.Context, secretName, cluster, action string, expireAt time.Time) error {
+func (s *Service) WriteAuditTLSEvent(ctx context.Context, secretName, secretType, cluster, action string, expireAt time.Time) error {
 	event := AuditTLSEvent{
 		ID:         uuid.New().String(),
 		Action:     action,
 		SecretName: secretName,
+		SecretType: secretType,
 		Cluster:    cluster,
 		ExpireAt:   expireAt.Unix(),
 	}

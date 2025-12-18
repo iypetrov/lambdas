@@ -62,6 +62,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	secretName := strings.Join(secretNameWithSuffixParts[:len(secretNameWithSuffixParts)-1], "-")
 
 	cluster := strings.Split(secretName, ".")[1]
+	secretType := strings.Split(secretName, ".")[2]
 
 	secretDetail, err := secretsMangerService.GetSecretDetails(ctx, secretName)
 	if err != nil {
@@ -80,6 +81,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	err = dynamodbService.WriteAuditTLSEvent(
 		ctx, 
 		secretName, 
+		secretType,
 		cluster,
 		eventName, 
 		time.Now().UTC().Add(168 * time.Hour),
