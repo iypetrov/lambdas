@@ -15,6 +15,7 @@ type AuditTLSEvent struct {
 	ID         string `dynamodbav:"id"`
 	Action     string `dynamodbav:"action"`
 	SecretName string `dynamodbav:"secret_name"`
+	SecretType string `dynamodbav:"secret_type"`
 	Cluster    string `dynamodbav:"cluster"`
 	ExpireAt   int64  `dynamodbav:"expire_at"`
 }
