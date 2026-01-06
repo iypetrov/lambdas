@@ -100,6 +100,17 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 	log.Info("Secret %s passed validation check for TLS Certificate type", secretName)
 
+	switch secretType {
+	case "CreateSecret":
+		log.Info("CreateSecret event was received: %v", detail)
+	case "PutSecretValue":
+		log.Info("PutSecretValue event was received: %v", detail)
+	case "DeleteSecret":
+		log.Info("DeleteSecret event was received: %v", detail)
+	default:
+		log.Warn("Unhandled event type %s for secret %s", eventName, secretName)
+	}
+
 	return detail, nil
 }
 
