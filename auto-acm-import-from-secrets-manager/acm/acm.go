@@ -42,28 +42,17 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 }
 
 func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string) (string, error) {
-	var nextToken *string
 	s.log.Info("Searching for certificate with domain: %s", domain)
+	out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{})
+	if err != nil {
+		return "", err
+	}
+	s.log.Info("Listed %d certificates", len(out.CertificateSummaryList))
 
-	for {
-		out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{
-			NextToken: nextToken,
-		})
-		if err != nil {
-			return "", err
+	for _, certSummary := range out.CertificateSummaryList {
+		if strings.Contains(*certSummary.DomainName, domain) {
+			return *certSummary.CertificateArn, nil
 		}
-		s.log.Info("Listed %d certificates", len(out.CertificateSummaryList))
-
-		for _, certSummary := range out.CertificateSummaryList {
-			if strings.Contains(*certSummary.DomainName, domain) {
-				return *certSummary.CertificateArn, nil
-			}
-		}
-
-		if out.NextToken == nil {
-			break
-		}
-		nextToken = out.NextToken
 	}
 
 	return "", fmt.Errorf("certificate not found for domain: %s", domain)
