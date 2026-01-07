@@ -12,24 +12,6 @@ templ ImportTLSCertificateForm(env string) {
 	<input type="hidden" name="cluster" x-bind:value="$store.cluster.selectedCluster" required />
 
 	@form.Item() {
-		@form.Label(form.LabelProps{For: "name"}) {
-			Certificate Name
-		}
-		@form.Description(form.DescriptionProps{}) {
-			The name will be prefixed with RESTRICTED.&lt;cluster&gt;.&lt;type&gt;.
-		}
-		@form.Description(form.DescriptionProps{}) {
-			Name should be a valid domain name (e.g., subdomain.example.com).
-		}
-		@input.Input(input.Props{
-			Name: "name",
-			Type: input.TypeText,
-			Placeholder: "Enter certificate name",
-			Required: true,
-		})
-	}
-
-	@form.Item() {
 		@form.Label(form.LabelProps{For: "crt"}) {
 			Certificate (CRT)
 		}
