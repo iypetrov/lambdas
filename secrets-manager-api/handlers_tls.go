@@ -1,13 +1,14 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-	"crypto/tls"
-	"crypto/x509"
 
+	"github.com/dchest/validator"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/iypetrov/lambdas/secrets-manager-api/secrets"
@@ -148,6 +149,12 @@ func (hnd *RouterHandler) ImportTLSCertificate(w http.ResponseWriter, r *http.Re
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("cluster is required")))
 		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
 	}
+
+	if ! validator.IsValidDomain(name) {
+		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("invalid certificate name: must be a valid domain name")))
+		return utils.Render(w, r, components.EmptyTLSCertificatesTable())
+	}
+
 
 	if crt == "" || key == "" {
 		status.AddToast(w, status.ErrorBadRequest(fmt.Errorf("both certificate (crt) and private key (key) are required for TLS certificates")))
