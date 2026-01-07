@@ -8,7 +8,6 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
@@ -63,18 +62,4 @@ func (s *Service) WriteAuditEvent(ctx context.Context, secretName, secretType, c
 		return "", err
 	}
 	return id, nil
-}
-
-func(s *Service) AddArn(ctx context.Context, id, arn string) error {
-	_, err := s.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName: aws.String("audit-tls-events"),
-		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{Value: id},
-		},
-		UpdateExpression: aws.String("SET arn = :arn"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":arn": &types.AttributeValueMemberS{Value: arn},
-		},
-	})
-	return err
 }

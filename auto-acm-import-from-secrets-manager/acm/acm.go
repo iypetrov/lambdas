@@ -3,6 +3,7 @@ package acm
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
@@ -42,6 +43,7 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 
 func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string) (string, error) {
 	var nextToken *string
+	s.log.Info("Searching for certificate with domain: %s", domain)
 
 	for {
 		out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{
@@ -52,7 +54,7 @@ func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string)
 		}
 
 		for _, certSummary := range out.CertificateSummaryList {
-			if *certSummary.DomainName == domain {
+			if strings.Contains(*certSummary.DomainName, domain) {
 				return *certSummary.CertificateArn, nil
 			}
 		}
