@@ -80,7 +80,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 	log.Info("Secret %s passed validation check for restricted secret", secretName)
 
-	err = dynamodbService.WriteAuditEvent(
+	id, err := dynamodbService.WriteAuditEvent(
 		ctx, 
 		secretName, 
 		secretType,
@@ -113,6 +113,11 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		certArn, err := acmService.ImportCert(ctx, cert.Crt, cert.Key)
 		if err != nil {
 			log.Error("Failed to import certificate for secret %s: %v", secretName, err)
+			return detail, err
+		}
+		err = dynamodbService.AddArn(ctx, id, certArn)
+		if err != nil {
+			log.Error("Failed to update audit event with ARN for secret %s: %v", secretName, err)
 			return detail, err
 		}
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
