@@ -30,6 +30,10 @@ type SecretsManagerEventDetail struct {
 	Resources         []map[string]interface{} `json:"resources"`
 }
 
+const (
+	ACMImportARNTagKey = "ACMImportARN"
+)
+
 func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, error) {
 	log := logger.Get(ctx)
 	cfg := config.Get(ctx)
@@ -115,16 +119,26 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 			log.Error("Failed to import certificate for secret %s: %v", secretName, err)
 			return detail, err
 		}
+		additionalTag := secretsmanager.AddTagRequest{
+			Name:  secretName,
+			Key: ACMImportARNTagKey,
+			Value: certArn,
+		}
+		err = secretsMangerService.AddTag(ctx, additionalTag)
+		if err != nil {
+			log.Error("Failed to add ACMImportARN tag to secret %s: %v", secretName, err)
+			return detail, err
+		}
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
 	case "DeleteSecret":
-		domain := strings.Split(secretName, ".")[3:]
-		time.Sleep(10 * time.Second) // wait for ACM to update its state
-		arn, err := acmService.FindCertificateARNByDomain(ctx, strings.Join(domain, "."))
-		if err != nil {
-			log.Error("No certificate found in ACM for secret %s", secretName)
-			return detail, nil
+		var certArn string
+		for _, tag := range secretDetail.Tags {
+			if tag.Key == ACMImportARNTagKey {
+				certArn = tag.Value
+				break
+			}
 		}
-		log.Info("Found certificate in ACM for secret %s with ARN %s", secretName, arn)
+		log.Info("Found ACM certificate ARN %s for secret %s", certArn, secretName)
 		log.Info("DeleteSecret event was received: %v", detail)
 	default:
 		log.Warn("Unhandled event type %s for secret %s", eventName, secretName)

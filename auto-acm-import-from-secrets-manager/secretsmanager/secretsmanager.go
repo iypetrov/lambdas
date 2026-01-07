@@ -100,6 +100,12 @@ type TLSCertificateData struct {
 	Key string `json:"key"`
 }
 
+type AddTagRequest struct {
+	Name  string `json:"name"`
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type Service struct {
 	client *secretsmanager.Client
 	log    logger.Logger
@@ -190,4 +196,22 @@ func (s *Service) GetSecretTLS(ctx context.Context, secretName string) (TLSCerti
 
 	s.log.Info("Retrieved TLS data for secret %s", secretName)
 	return tlsData, nil
+}
+
+func (s *Service) AddTag(ctx context.Context, req AddTagRequest) error {
+	tagReq := &secretsmanager.TagResourceInput{
+		SecretId: aws.String(req.Name),
+		Tags: []awssmtype.Tag{
+			{
+				Key:   aws.String(req.Key),
+				Value: aws.String(req.Value),
+			},
+		},
+	}
+	_, err := s.client.TagResource(ctx, tagReq)
+	if err != nil {
+		s.log.Error("Error adding tag to secret %s: %v", req.Name, err)
+		return fmt.Errorf("%s", err.Error())
+	}
+	return nil
 }

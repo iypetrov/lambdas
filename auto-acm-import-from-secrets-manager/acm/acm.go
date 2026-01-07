@@ -2,12 +2,9 @@ package acm
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
-	"github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
@@ -40,27 +37,4 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 		return "", err
 	}
 	return aws.StringValue(result.CertificateArn), nil
-}
-
-func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string) (string, error) {
-	s.log.Info("Searching for certificate with domain: %s", domain)
-	out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{
-		CertificateStatuses: []types.CertificateStatus{
-			types.CertificateStatusIssued,
-			types.CertificateStatusPendingValidation,
-			types.CertificateStatusInactive,
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	s.log.Info("Listed %d certificates", len(out.CertificateSummaryList))
-
-	for _, certSummary := range out.CertificateSummaryList {
-		if strings.Contains(*certSummary.DomainName, domain) {
-			return *certSummary.CertificateArn, nil
-		}
-	}
-
-	return "", fmt.Errorf("certificate not found for domain: %s", domain)
 }
