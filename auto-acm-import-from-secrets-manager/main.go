@@ -138,7 +138,11 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 				break
 			}
 		}
-		log.Info("Found ACM certificate ARN %s for secret %s", certArn, secretName)
+		err := acmService.DeleteCert(ctx, certArn)
+		if err != nil {
+			log.Error("Failed to delete certificate for secret %s with ARN %s: %v", secretName, certArn, err)
+			return detail, err
+		}
 		log.Info("DeleteSecret event was received: %v", detail)
 	default:
 		log.Warn("Unhandled event type %s for secret %s", eventName, secretName)
