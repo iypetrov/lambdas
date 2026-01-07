@@ -7,6 +7,7 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
+	"github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
@@ -43,7 +44,13 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 
 func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string) (string, error) {
 	s.log.Info("Searching for certificate with domain: %s", domain)
-	out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{})
+	out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{
+		CertificateStatuses: []types.CertificateStatus{
+			types.CertificateStatusIssued,
+			types.CertificateStatusPendingValidation,
+			types.CertificateStatusInactive,
+		},
+	})
 	if err != nil {
 		return "", err
 	}

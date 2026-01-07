@@ -118,6 +118,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
 	case "DeleteSecret":
 		domain := strings.Split(secretName, ".")[3:]
+		time.Sleep(10 * time.Second) // wait for ACM to update its state
 		arn, err := acmService.FindCertificateARNByDomain(ctx, strings.Join(domain, "."))
 		if err != nil {
 			log.Error("No certificate found in ACM for secret %s", secretName)
