@@ -80,7 +80,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 	log.Info("Secret %s passed validation check for restricted secret", secretName)
 
-	id, err := dynamodbService.WriteAuditEvent(
+	_, err = dynamodbService.WriteAuditEvent(
 		ctx, 
 		secretName, 
 		secretType,
@@ -115,15 +115,15 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 			log.Error("Failed to import certificate for secret %s: %v", secretName, err)
 			return detail, err
 		}
-		err = dynamodbService.AddArn(ctx, id, certArn)
-		if err != nil {
-			log.Error("Failed to update audit event with ARN for secret %s: %v", secretName, err)
-			return detail, err
-		}
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
-	case "PutSecretValue":
-		log.Info("PutSecretValue event was received: %v", detail)
 	case "DeleteSecret":
+		domain := strings.Split(secretName, ".")[3:]
+		arn, err := acmService.FindCertificateARNByDomain(ctx, strings.Join(domain, "."))
+		if err != nil {
+			log.Error("No certificate found in ACM for secret %s", secretName)
+			return detail, nil
+		}
+		log.Info("Found certificate in ACM for secret %s with ARN %s", secretName, arn)
 		log.Info("DeleteSecret event was received: %v", detail)
 	default:
 		log.Warn("Unhandled event type %s for secret %s", eventName, secretName)

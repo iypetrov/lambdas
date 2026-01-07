@@ -2,6 +2,7 @@ package acm
 
 import (
 	"context"
+	"fmt"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
@@ -37,4 +38,30 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 		return "", err
 	}
 	return aws.StringValue(result.CertificateArn), nil
+}
+
+func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string) (string, error) {
+	var nextToken *string
+
+	for {
+		out, err := s.client.ListCertificates(ctx, &acm.ListCertificatesInput{
+			NextToken: nextToken,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		for _, certSummary := range out.CertificateSummaryList {
+			if *certSummary.DomainName == domain {
+				return *certSummary.CertificateArn, nil
+			}
+		}
+
+		if out.NextToken == nil {
+			break
+		}
+		nextToken = out.NextToken
+	}
+
+	return "", fmt.Errorf("certificate not found for domain: %s", domain)
 }
