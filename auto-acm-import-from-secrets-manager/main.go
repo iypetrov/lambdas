@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/acm"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/dynamodb"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
@@ -34,6 +35,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	cfg := config.Get(ctx)
 	secretsMangerService := secretsmanager.NewService(ctx, cfg, log)
 	dynamodbService := dynamodb.NewService(ctx, cfg, log)
+	acmService := acm.NewService(ctx, cfg, log)
 
 	var detail SecretsManagerEventDetail
 	if err := json.Unmarshal(event.Detail, &detail); err != nil {
@@ -103,6 +105,17 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	switch eventName {
 	case "CreateSecret":
 		log.Info("CreateSecret event was received: %v", detail)
+		cert, err := secretsMangerService.GetSecretTLS(ctx, secretName)
+		if err != nil {
+			log.Error("Failed to get TLS data for secret %s: %v", secretName, err)
+			return detail, err
+		}
+		certArn, err := acmService.ImportCert(ctx, cert.Crt, cert.Key)
+		if err != nil {
+			log.Error("Failed to import certificate for secret %s: %v", secretName, err)
+			return detail, err
+		}
+		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
 	case "PutSecretValue":
 		log.Info("PutSecretValue event was received: %v", detail)
 	case "DeleteSecret":

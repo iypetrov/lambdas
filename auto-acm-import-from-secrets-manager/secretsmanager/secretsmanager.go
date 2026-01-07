@@ -2,6 +2,7 @@ package secretsmanager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -94,6 +95,11 @@ type GetSecretDetailsResponse struct {
 	Description  string            `json:"description,omitempty"`
 }
 
+type TLSCertificateData struct {
+	Crt string `json:"crt"`
+	Key string `json:"key"`
+}
+
 type Service struct {
 	client *secretsmanager.Client
 	log    logger.Logger
@@ -162,4 +168,26 @@ func (s *Service) GetSecretDetails(ctx context.Context, secretName string) (*Get
 		LastRotatedDate: lastRotatedDate,
 		Description:     description,
 	}, nil
+}
+
+func (s *Service) GetSecretTLS(ctx context.Context, secretName string) (TLSCertificateData, error) {
+	req := &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
+	}
+
+	result, err := s.client.GetSecretValue(ctx, req)
+	if err != nil {
+		s.log.Error("Error retrieving secret %s: %v", secretName, err)
+		return TLSCertificateData{}, fmt.Errorf("%s", err.Error())
+	}
+
+	var tlsData TLSCertificateData
+	err = json.Unmarshal([]byte(*result.SecretString), &tlsData)
+	if err != nil {
+		s.log.Error("Error unmarshaling secret %s: %v", secretName, err)
+		return TLSCertificateData{}, fmt.Errorf("error unmarshaling secret: %s", err.Error())
+	}
+
+	s.log.Info("Retrieved TLS data for secret %s", secretName)
+	return tlsData, nil
 }
