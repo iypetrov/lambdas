@@ -52,6 +52,7 @@ func (s *Service) FindCertificateARNByDomain(ctx context.Context, domain string)
 		if err != nil {
 			return "", err
 		}
+		s.log.Info("Listed %d certificates", len(out.CertificateSummaryList))
 
 		for _, certSummary := range out.CertificateSummaryList {
 			if strings.Contains(*certSummary.DomainName, domain) {
