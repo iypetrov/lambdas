@@ -80,7 +80,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 	}
 	log.Info("Secret %s passed validation check for restricted secret", secretName)
 
-	err = dynamodbService.WriteAuditTLSEvent(
+	err = dynamodbService.WriteAuditEvent(
 		ctx, 
 		secretName, 
 		secretType,

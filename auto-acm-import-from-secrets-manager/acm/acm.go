@@ -3,8 +3,8 @@ package acm
 import (
 	"context"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/acm"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/config"
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
@@ -30,8 +30,8 @@ func NewService(ctx context.Context, cfg config.Config, log logger.Logger) *Serv
 
 func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, error) {
 	result, err := s.client.ImportCertificate(ctx, &acm.ImportCertificateInput{
-		Certificate: cert,
-		PrivateKey:  key,
+		Certificate: []byte(cert),
+		PrivateKey:  []byte(key),
 	})
 	if err != nil {
 		return "", err

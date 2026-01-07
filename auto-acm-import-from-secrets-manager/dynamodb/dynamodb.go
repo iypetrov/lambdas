@@ -13,7 +13,7 @@ import (
 	"github.com/iypetrov/lambdas/auto-acm-import-from-secrets-manager/logger"
 )
 
-type AuditTLSEvent struct {
+type AuditEvent struct {
 	ID         string `dynamodbav:"id"`
 	Action     string `dynamodbav:"action"`
 	SecretName string `dynamodbav:"secret_name"`
@@ -40,8 +40,8 @@ func NewService(ctx context.Context, cfg config.Config, log logger.Logger) *Serv
 	}
 }
 
-func (s *Service) WriteAuditTLSEvent(ctx context.Context, secretName, secretType, cluster, action string, expireAt time.Time) error {
-	event := AuditTLSEvent{
+func (s *Service) WriteAuditEvent(ctx context.Context, secretName, secretType, cluster, action string, expireAt time.Time) error {
+	event := AuditEvent{
 		ID:         uuid.New().String(),
 		Action:     action,
 		SecretName: secretName,
