@@ -20,7 +20,6 @@ type AuditEvent struct {
 	SecretName string `dynamodbav:"secret_name"`
 	SecretType string `dynamodbav:"secret_type"`
 	Cluster	   string `dynamodbav:"cluster"`
-	Arn		   string `dynamodbav:"arn"`
 	ExpireAt   int64  `dynamodbav:"expire_at"`
 }
 
