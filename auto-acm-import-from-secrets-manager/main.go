@@ -131,6 +131,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 		}
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
 	case "PutSecretValue":
+		log.Info("PutSecretValue event was received: %v", detail)
 		var certArn string
 		for _, tag := range secretDetail.Tags {
 			if tag.Key == ACMImportARNTagKey {
@@ -149,6 +150,7 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 			return detail, err
 		}
 	case "DeleteSecret":
+		log.Info("DeleteSecret event was received: %v", detail)
 		var certArn string
 		for _, tag := range secretDetail.Tags {
 			if tag.Key == ACMImportARNTagKey {
@@ -161,7 +163,6 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 			log.Error("Failed to delete certificate for secret %s with ARN %s: %v", secretName, certArn, err)
 			return detail, err
 		}
-		log.Info("DeleteSecret event was received: %v", detail)
 	default:
 		log.Warn("Unhandled event type %s for secret %s", eventName, secretName)
 	}
