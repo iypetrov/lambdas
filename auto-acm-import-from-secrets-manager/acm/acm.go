@@ -39,6 +39,18 @@ func (s *Service) ImportCert(ctx context.Context, cert, key string) (string, err
 	return aws.StringValue(result.CertificateArn), nil
 }
 
+func (s *Service) ReimportCert(ctx context.Context, cert, key, arn string) (string, error) {
+	result, err := s.client.ImportCertificate(ctx, &acm.ImportCertificateInput{
+		Certificate: []byte(cert),
+		PrivateKey:  []byte(key),
+		CertificateArn: aws.String(arn),
+	})
+	if err != nil {
+		return "", err
+	}
+	return aws.StringValue(result.CertificateArn), nil
+}
+
 func (s *Service) DeleteCert(ctx context.Context, certARN string) error {
 	_, err := s.client.DeleteCertificate(ctx, &acm.DeleteCertificateInput{
 		CertificateArn: aws.String(certARN),

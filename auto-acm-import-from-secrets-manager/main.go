@@ -130,6 +130,24 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (interface{}, er
 			return detail, err
 		}
 		log.Info("Successfully imported certificate for secret %s with ARN %s", secretName, certArn)
+	case "PutSecretValue":
+		var certArn string
+		for _, tag := range secretDetail.Tags {
+			if tag.Key == ACMImportARNTagKey {
+				certArn = tag.Value
+				break
+			}
+		}
+		cert, err := secretsMangerService.GetSecretTLS(ctx, secretName)
+		if err != nil {
+			log.Error("Failed to get TLS data for secret %s: %v", secretName, err)
+			return detail, err
+		}
+		_, err = acmService.ReimportCert(ctx, cert.Crt, cert.Key, certArn)
+		if err != nil {
+			log.Error("Failed to reimport certificate for secret %s: %v", secretName, err)
+			return detail, err
+		}
 	case "DeleteSecret":
 		var certArn string
 		for _, tag := range secretDetail.Tags {
